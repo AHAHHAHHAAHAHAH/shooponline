@@ -1,24 +1,40 @@
 import type { APIRoute } from "astro";
 import Stripe from "stripe";
-import { db } from "../../lib/firebase-client";
-import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
+import { initializeApp, getApps, getApp } from "firebase/app";
+import { getFirestore, collection, addDoc, updateDoc, doc } from "firebase/firestore";
 import data from "../../data/data.json";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    // 1. Recupero Sicuro della Chiave Stripe per Cloudflare
-    const runtimeEnv = (locals as any).runtime?.env || {};
-    const stripeSecret = runtimeEnv.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
+    // Recuperiamo tutte le chiavi dall'ambiente Cloudflare
+    const env = (locals as any).runtime?.env || import.meta.env;
 
-    if (!stripeSecret) {
-      throw new Error("STRIPE_SECRET_KEY mancante! Controlla le Environment Variables su Cloudflare.");
+    // 1. INIZIALIZZAZIONE SICURA DI FIREBASE SUL SERVER
+    const firebaseConfig = {
+      apiKey: env.PUBLIC_FIREBASE_API_KEY,
+      authDomain: env.PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: env.PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: env.PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: env.PUBLIC_FIREBASE_APP_ID
+    };
+
+    if (!firebaseConfig.apiKey) {
+      throw new Error("Mancano le chiavi PUBLIC_FIREBASE_... nelle variabili di Cloudflare!");
     }
 
-    // 2. Inizializzazione diretta di Stripe
-    const stripe = new Stripe(stripeSecret, {
-      apiVersion: "2023-10-16" as any,
-    });
+    // Creiamo l'app Firebase o usiamo quella esistente se è già in memoria
+    const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+    const db = getFirestore(app);
 
+    // 2. INIZIALIZZAZIONE SICURA DI STRIPE
+    const stripeSecret = env.STRIPE_SECRET_KEY;
+    if (!stripeSecret) {
+      throw new Error("Manca la STRIPE_SECRET_KEY nelle variabili di Cloudflare!");
+    }
+    const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" as any });
+
+    // 3. LOGICA DELL'ORDINE
     const body = await request.json();
     const { ordineData } = body;
     const { numeroTavolo, items, noteOrdine } = ordineData;
@@ -49,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({ error: "Totale non valido" }), { status: 400 });
     }
 
-    // 3. Creiamo l'ordine in Firebase
+    // Salviamo l'ordine su Firestore
     const ordineDoc = await addDoc(collection(db, "ordini"), {
       numeroTavolo: Number(numeroTavolo),
       items: itemsValidati,
@@ -63,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       aggiornatoAt: new Date(),
     });
 
-    // 4. Creiamo il Payment Intent con Stripe (trasformando gli euro in centesimi)
+    // Creiamo la transazione con Stripe
     const importoCentesimi = Math.round(totaleCalcolato * 100);
     const paymentIntent = await stripe.paymentIntents.create({
       amount: importoCentesimi,
@@ -75,7 +91,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       },
     });
 
-    // 5. Aggiorniamo l'ordine con l'ID di Stripe
     await updateDoc(doc(db, "ordini", ordineDoc.id), { stripePaymentIntentId: paymentIntent.id });
 
     return new Response(
@@ -84,13 +99,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   } catch (err: any) {
     console.error("Errore Dettagliato:", err.message);
-    
-    // RIMANDIAMO L'ERRORE REALE AL BROWSER
     return new Response(
-      JSON.stringify({ 
-        error: "Errore server", 
-        dettaglio: err.message 
-      }), 
+      JSON.stringify({ error: "Errore server", dettaglio: err.message }), 
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
