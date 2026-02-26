@@ -1,11 +1,24 @@
 import type { APIRoute } from "astro";
-import { getStripe, toCents } from "../../lib/stripe";
+import Stripe from "stripe";
 import { db } from "../../lib/firebase-client";
 import { collection, addDoc, updateDoc, doc } from "firebase/firestore";
 import data from "../../data/data.json";
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
   try {
+    // 1. Recupero Sicuro della Chiave Stripe per Cloudflare
+    const runtimeEnv = (locals as any).runtime?.env || {};
+    const stripeSecret = runtimeEnv.STRIPE_SECRET_KEY || import.meta.env.STRIPE_SECRET_KEY;
+
+    if (!stripeSecret) {
+      throw new Error("STRIPE_SECRET_KEY mancante! Controlla le Environment Variables su Cloudflare.");
+    }
+
+    // 2. Inizializzazione diretta di Stripe
+    const stripe = new Stripe(stripeSecret, {
+      apiVersion: "2023-10-16" as any,
+    });
+
     const body = await request.json();
     const { ordineData } = body;
     const { numeroTavolo, items, noteOrdine } = ordineData;
@@ -36,9 +49,7 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ error: "Totale non valido" }), { status: 400 });
     }
 
-    const stripe = getStripe();
-
-    // Creiamo l'ordine usando il client SDK
+    // 3. Creiamo l'ordine in Firebase
     const ordineDoc = await addDoc(collection(db, "ordini"), {
       numeroTavolo: Number(numeroTavolo),
       items: itemsValidati,
@@ -52,8 +63,10 @@ export const POST: APIRoute = async ({ request }) => {
       aggiornatoAt: new Date(),
     });
 
+    // 4. Creiamo il Payment Intent con Stripe (trasformando gli euro in centesimi)
+    const importoCentesimi = Math.round(totaleCalcolato * 100);
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: toCents(totaleCalcolato),
+      amount: importoCentesimi,
       currency: "eur",
       automatic_payment_methods: { enabled: true },
       metadata: {
@@ -62,14 +75,23 @@ export const POST: APIRoute = async ({ request }) => {
       },
     });
 
+    // 5. Aggiorniamo l'ordine con l'ID di Stripe
     await updateDoc(doc(db, "ordini", ordineDoc.id), { stripePaymentIntentId: paymentIntent.id });
 
     return new Response(
       JSON.stringify({ clientSecret: paymentIntent.client_secret, ordineId: ordineDoc.id }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
-  } catch (err) {
-    console.error("Errore payment-intent:", err);
-    return new Response(JSON.stringify({ error: "Errore server" }), { status: 500 });
+  } catch (err: any) {
+    console.error("Errore Dettagliato:", err.message);
+    
+    // RIMANDIAMO L'ERRORE REALE AL BROWSER
+    return new Response(
+      JSON.stringify({ 
+        error: "Errore server", 
+        dettaglio: err.message 
+      }), 
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 };
