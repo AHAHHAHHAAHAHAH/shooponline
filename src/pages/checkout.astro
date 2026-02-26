@@ -1,0 +1,406 @@
+---
+import Layout from "../layouts/Layout.astro";
+import data from "../data/data.json";
+
+const pub = data.pub;
+---
+
+<Layout
+  title={`Checkout — ${pub.nome}`}
+  description="Riepilogo ordine e pagamento"
+  noIndex={true}
+>
+  <div class="checkout-page">
+    <div class="checkout-nav">
+      <div class="container checkout-nav-inner">
+        <button onclick="history.back()" class="btn btn-ghost btn-sm">← Torna al menu</button>
+        <span class="checkout-title">Il tuo ordine</span>
+        <div style="width:100px;"></div>
+      </div>
+    </div>
+
+    <div class="container checkout-layout">
+      <!-- COLONNA SINISTRA: riepilogo -->
+      <div class="checkout-summary">
+        <h2>Riepilogo</h2>
+
+        <!-- Info tavolo -->
+        <div class="tavolo-info-box" id="tavoloInfo">
+          <div class="tavolo-info-row">
+            <span>📍 Tavolo</span>
+            <strong id="tavoloNum">—</strong>
+          </div>
+        </div>
+
+        <div id="cartItems" class="cart-items-list">
+          <!-- popolato da JS -->
+        </div>
+
+        <div class="cart-empty" id="cartEmpty" style="display:none;">
+          <div style="text-align:center; padding:40px 0;">
+            <div style="font-size:3rem; margin-bottom:16px;">🛒</div>
+            <p>Il tuo carrello è vuoto</p>
+            <a href="/menu" class="btn btn-primary" style="margin-top:16px;">Torna al menu</a>
+          </div>
+        </div>
+
+        <div id="cartSummary">
+          <div class="divider"></div>
+          <div class="totale-row">
+            <span>Subtotale</span>
+            <span id="subtotale">€ 0,00</span>
+          </div>
+          {pub.coperto > 0 && (
+            <div class="totale-row">
+              <span>Coperto</span>
+              <span>€ {pub.coperto.toFixed(2).replace('.', ',')}</span>
+            </div>
+          )}
+          <div class="totale-row totale-finale">
+            <strong>Totale</strong>
+            <strong id="totaleFinale">€ 0,00</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLONNA DESTRA: pagamento -->
+      <div class="checkout-payment">
+        <h2>Come vuoi pagare?</h2>
+
+        <div class="payment-methods">
+          {pub.stripeEnabled && (
+            <label class="payment-option" id="optCarta">
+              <input type="radio" name="pagamento" value="carta" checked />
+              <div class="payment-option-content">
+                <span class="payment-icon">💳</span>
+                <div>
+                  <strong>Paga ora con carta</strong>
+                  <p>Visa, Mastercard, Apple Pay, Google Pay</p>
+                </div>
+              </div>
+            </label>
+          )}
+          {pub.cashEnabled && (
+            <label class="payment-option" id="optCassa">
+              <input type="radio" name="pagamento" value="cassa" />
+              <div class="payment-option-content">
+                <span class="payment-icon">💵</span>
+                <div>
+                  <strong>Paga in cassa</strong>
+                  <p>Contanti o carta alla fine della serata</p>
+                </div>
+              </div>
+            </label>
+          )}
+        </div>
+
+        {data.checkout.noteOrdineAbilitate && (
+          <div class="note-section">
+            <label class="label">Note per il personale (opzionale)</label>
+            <textarea
+              id="noteOrdine"
+              class="input"
+              rows="3"
+              placeholder={data.checkout.noteOrdinePlaceholder}
+            ></textarea>
+          </div>
+        )}
+
+        <!-- STRIPE CARD ELEMENT -->
+        <div id="stripeWrap" class="stripe-wrap">
+          <label class="label">Dati carta</label>
+          <div id="cardElement" class="card-element-box"></div>
+          <div id="cardErrors" class="card-errors" role="alert"></div>
+        </div>
+
+        <button class="btn btn-primary btn-lg" id="submitBtn" style="width:100%; margin-top:24px;">
+          <span id="submitText">Invia ordine</span>
+          <span class="spinner" id="submitSpinner" style="display:none;"></span>
+        </button>
+
+        <p class="checkout-note">
+          🔒 Pagamento sicuro. I tuoi dati non vengono memorizzati sul nostro server.
+        </p>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .checkout-page { min-height: 100vh; }
+  .checkout-nav { background: rgba(10,8,0,0.95); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
+  .checkout-nav-inner { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; }
+  .checkout-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; }
+
+  .checkout-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    padding: 40px 24px 80px;
+    align-items: start;
+  }
+
+  .checkout-summary h2, .checkout-payment h2 { font-size: 1.5rem; margin-bottom: 24px; }
+
+  .tavolo-info-box {
+    background: rgba(200,146,42,0.07);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+  }
+  .tavolo-info-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.95rem; }
+  .tavolo-info-row strong { color: var(--accent-light); font-size: 1.1rem; }
+
+  .cart-items-list { display: flex; flex-direction: column; gap: 12px; }
+  .cart-item {
+    display: flex; align-items: center; gap: 14px;
+    padding: 12px; background: var(--panel); border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .cart-item-img { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+  .cart-item-info { flex: 1; }
+  .cart-item-nome { font-weight: 600; font-size: 0.95rem; margin-bottom: 2px; }
+  .cart-item-prezzo { font-size: 0.85rem; color: var(--muted); }
+  .cart-item-controls { display: flex; align-items: center; gap: 8px; }
+  .cart-item-qty-btn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border); background: none; color: var(--text); font-size: 1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all var(--transition); }
+  .cart-item-qty-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .cart-item-qty { min-width: 20px; text-align: center; font-weight: 700; }
+  .cart-item-total { font-family: var(--font-display); font-weight: 700; color: var(--accent-light); white-space: nowrap; min-width: 60px; text-align: right; }
+
+  .totale-row { display: flex; justify-content: space-between; padding: 10px 0; font-size: 0.95rem; color: var(--text-soft); }
+  .totale-finale { padding-top: 16px; border-top: 1px solid var(--border); font-size: 1.2rem; color: var(--text); }
+
+  .payment-methods { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+  .payment-option { display: flex; align-items: center; cursor: pointer; }
+  .payment-option input[type="radio"] { display: none; }
+  .payment-option-content {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px; width: 100%;
+    background: var(--panel); border: 2px solid var(--border);
+    border-radius: var(--radius-sm); transition: all var(--transition);
+  }
+  .payment-option input:checked + .payment-option-content {
+    border-color: var(--accent);
+    background: rgba(200,146,42,0.07);
+  }
+  .payment-icon { font-size: 1.8rem; }
+  .payment-option-content strong { display: block; margin-bottom: 2px; }
+  .payment-option-content p { font-size: 0.82rem; color: var(--muted); margin: 0; }
+
+  .note-section { margin-bottom: 24px; }
+  .note-section .input { resize: none; }
+
+  .stripe-wrap { margin-bottom: 8px; }
+  .card-element-box {
+    padding: 16px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-top: 8px;
+  }
+  .card-errors { color: var(--danger); font-size: 0.85rem; margin-top: 8px; min-height: 20px; }
+
+  .checkout-note { font-size: 0.78rem; color: var(--muted); text-align: center; margin-top: 16px; }
+
+  @media (max-width: 768px) {
+    .checkout-layout { grid-template-columns: 1fr; gap: 32px; }
+  }
+</style>
+
+<script>
+  import { loadStripe } from "@stripe/stripe-js";
+
+  const CART_KEY = "puborder_cart";
+  const STRIPE_PK = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY;
+
+  interface CartItem { id: string; nome: string; prezzo: number; immagine: string; quantita: number; }
+
+  function getCart(): CartItem[] {
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || "[]"); } catch { return []; }
+  }
+  function saveCart(c: CartItem[]) { localStorage.setItem(CART_KEY, JSON.stringify(c)); }
+
+  const numeroTavolo = parseInt(sessionStorage.getItem("puborder_tavolo") || new URLSearchParams(window.location.search).get("tavolo") || "0");
+  if (numeroTavolo === 0) {
+    const warn = document.createElement("div");
+    warn.style.cssText = "background:#c0392b;color:#fff;padding:12px 20px;border-radius:8px;margin-bottom:16px;font-size:0.9rem;";
+    warn.textContent = "⚠️ Numero tavolo non rilevato. Torna al menu tramite il QR code del tuo tavolo.";
+    document.querySelector(".checkout-summary")?.prepend(warn);
+  }
+  document.getElementById("tavoloNum")!.textContent = numeroTavolo > 0 ? `Tavolo ${numeroTavolo}` : "—";
+
+ function renderCart() {
+    const cart = getCart();
+    const listEl = document.getElementById("cartItems")!;
+    const emptyEl = document.getElementById("cartEmpty")!;
+    const summaryEl = document.getElementById("cartSummary")!;
+    const submitBtn = document.getElementById("submitBtn") as HTMLButtonElement;
+
+    if (cart.length === 0) {
+      listEl.style.display = "none";
+      emptyEl.style.display = "block";
+      summaryEl.style.display = "none";
+      submitBtn.disabled = true;
+      return;
+    }
+
+    listEl.style.display = "flex";
+    emptyEl.style.display = "none";
+    summaryEl.style.display = "block";
+    submitBtn.disabled = false;
+
+    // Qui aggiungiamo il bottone Cestino 🗑️
+    listEl.innerHTML = cart.map(item => `
+      <div class="cart-item">
+        <img class="cart-item-img" src="${item.immagine}" alt="${item.nome}" onerror="this.src='/images/placeholder.svg'" />
+        <div class="cart-item-info">
+          <div class="cart-item-nome">${item.nome}</div>
+          <div class="cart-item-prezzo">€ ${item.prezzo.toFixed(2).replace('.', ',')} cad.</div>
+        </div>
+        <div class="cart-item-controls">
+          <button class="cart-item-qty-btn" onclick="changeQty('${item.id}', -1)">−</button>
+          <span class="cart-item-qty">${item.quantita}</span>
+          <button class="cart-item-qty-btn" onclick="changeQty('${item.id}', 1)">+</button>
+          <button class="cart-item-qty-btn" style="color: var(--danger); border-color: transparent;" onclick="removeItem('${item.id}')">🗑️</button>
+        </div>
+        <div class="cart-item-total">€ ${(item.prezzo * item.quantita).toFixed(2).replace('.', ',')}</div>
+      </div>
+    `).join("");
+
+    const subtotale = cart.reduce((s, i) => s + i.prezzo * i.quantita, 0);
+    document.getElementById("subtotale")!.textContent = `€ ${subtotale.toFixed(2).replace('.', ',')}`;
+    document.getElementById("totaleFinale")!.textContent = `€ ${subtotale.toFixed(2).replace('.', ',')}`;
+  }
+
+  // Aggiungi questa funzione appena sotto (window as any).changeQty
+  (window as any).removeItem = function(id: string) {
+    const cart = getCart();
+    const nuovoCart = cart.filter(i => i.id !== id);
+    saveCart(nuovoCart);
+    renderCart();
+  };
+
+  (window as any).changeQty = function(id: string, delta: number) {
+    const cart = getCart();
+    const idx = cart.findIndex(i => i.id === id);
+    if (idx >= 0) {
+      cart[idx].quantita += delta;
+      if (cart[idx].quantita <= 0) cart.splice(idx, 1);
+    }
+    saveCart(cart);
+    renderCart();
+  };
+
+  // Stripe setup
+  let stripe: any = null;
+  let cardElement: any = null;
+
+  async function initStripe() {
+    if (!STRIPE_PK) return;
+    stripe = await loadStripe(STRIPE_PK);
+    if (!stripe) return;
+    const elements = stripe.elements({ appearance: { theme: "night", variables: { colorPrimary: "#c8922a" } } });
+    cardElement = elements.create("card", { style: { base: { color: "#f5efe0", fontFamily: "DM Sans, sans-serif", fontSize: "16px" } } });
+    cardElement.mount("#cardElement");
+    cardElement.on("change", (e: any) => {
+      const errEl = document.getElementById("cardErrors")!;
+      errEl.textContent = e.error ? e.error.message : "";
+    });
+  }
+
+  // Mostra/nascondi Stripe in base al metodo selezionato
+  const radios = document.querySelectorAll("input[name='pagamento']");
+  const stripeWrap = document.getElementById("stripeWrap")!;
+
+  function updatePaymentUI() {
+    const val = (document.querySelector("input[name='pagamento']:checked") as HTMLInputElement)?.value;
+    stripeWrap.style.display = val === "carta" ? "block" : "none";
+    const submitText = document.getElementById("submitText")!;
+    submitText.textContent = val === "carta" ? "Paga ora" : "Invia ordine";
+  }
+
+  radios.forEach(r => r.addEventListener("change", updatePaymentUI));
+
+  // SUBMIT ORDINE
+  document.getElementById("submitBtn")?.addEventListener("click", async () => {
+    const cart = getCart();
+    if (cart.length === 0) return;
+
+    const metodoPagamento = (document.querySelector("input[name='pagamento']:checked") as HTMLInputElement)?.value;
+    const noteOrdine = (document.getElementById("noteOrdine") as HTMLTextAreaElement)?.value || "";
+    const submitBtn = document.getElementById("submitBtn") as HTMLButtonElement;
+    const submitText = document.getElementById("submitText")!;
+    const spinner = document.getElementById("submitSpinner")!;
+
+    submitBtn.disabled = true;
+    submitText.style.display = "none";
+    spinner.style.display = "inline-block";
+
+    // NOTA: Non calcoliamo più il totale per mandarlo al server!
+    const ordineData = {
+      numeroTavolo,
+      // Inviamo solo gli ID e le quantità. Il prezzo lo ignorerà il server.
+      items: cart.map(i => ({ prodottoId: i.id, quantita: i.quantita })),
+      noteOrdine,
+    };
+
+    try {
+      if (metodoPagamento === "carta" && stripe && cardElement) {
+        // 1. Crea PaymentIntent sul server
+        const piRes = await fetch("/api/create-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ordineData }), // Rimosso 'totale'
+        });
+        
+        const resData = await piRes.json();
+        if (!piRes.ok) throw new Error(resData.error || "Errore Stripe");
+        
+        const { clientSecret, ordineId } = resData;
+
+        // 2. Conferma pagamento con Stripe
+        const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: cardElement },
+        });
+
+        if (error) {
+          document.getElementById("cardErrors")!.textContent = error.message;
+          submitBtn.disabled = false;
+          submitText.style.display = "inline";
+          spinner.style.display = "none";
+          return;
+        }
+
+        // 3. Redirect a successo
+        localStorage.removeItem(CART_KEY);
+        window.location.href = `/pagamento/successo?ordine=${ordineId}`;
+
+      } else {
+        // Paga in cassa
+        const res = await fetch("/api/crea-ordine", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(ordineData),
+        });
+        
+        const resData = await res.json();
+        if (!res.ok) throw new Error(resData.error || "Errore Cassa");
+
+        const { ordineId } = resData;
+        localStorage.removeItem(CART_KEY);
+        window.location.href = `/pagamento/successo?ordine=${ordineId}&metodo=cassa`;
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Errore durante l'invio. Riprova.");
+      submitBtn.disabled = false;
+      submitText.style.display = "inline";
+      spinner.style.display = "none";
+    }
+  });
+
+  initStripe();
+  updatePaymentUI();
+  renderCart();
+</script>

@@ -1,0 +1,124 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import data from "../../data/data.json";
+
+// sessionStorage non esiste lato server — leggiamo solo i query params dall'URL
+const ordineId = Astro.url.searchParams.get("ordine") || "";
+const metodo = Astro.url.searchParams.get("metodo") || "carta";
+const pub = data.pub;
+---
+
+<Layout title={`Ordine confermato — ${pub.nome}`} noIndex={true}>
+  <div class="successo-page">
+    <div class="successo-card">
+      <div class="check-anim">✓</div>
+      <h1>Ordine ricevuto!</h1>
+      <p class="successo-msg">{data.checkout.messaggioSuccesso}</p>
+
+      {ordineId && (
+        <div class="ordine-id-box">
+          <span class="ordine-label">Numero ordine</span>
+          <span class="ordine-id">#{ordineId.slice(-6).toUpperCase()}</span>
+        </div>
+      )}
+
+      {metodo === "cassa" ? (
+        <div class="metodo-info">
+          <span>💵</span>
+          <span>Pagherai in cassa alla fine della serata.</span>
+        </div>
+      ) : (
+        <div class="metodo-info success">
+          <span>✅</span>
+          <span>Pagamento con carta confermato.</span>
+        </div>
+      )}
+
+      <div class="attesa-box">
+        <div class="attesa-icon">⏱</div>
+        <div>
+          <strong>Tempo stimato</strong>
+          <p>{pub.tempoAttesaMedio}</p>
+        </div>
+      </div>
+
+      <div class="successo-actions">
+        <!-- Il link al tavolo viene costruito lato client via JS -->
+        <a href="#" id="aggiungiAltroBtn" class="btn btn-primary btn-lg">
+          Aggiungi altro
+        </a>
+        <a href="/" class="btn btn-ghost">Torna alla home</a>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .successo-page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: radial-gradient(ellipse at 50% 40%, rgba(200,146,42,0.06) 0%, transparent 70%);
+  }
+  .successo-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 48px 40px;
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+    animation: fadeUp 0.5s ease;
+  }
+  .check-anim {
+    width: 80px; height: 80px;
+    background: var(--success);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; color: #fff; font-weight: 700;
+    margin: 0 auto 24px;
+    box-shadow: 0 0 40px rgba(39,174,96,0.4);
+    animation: bounceIn 0.6s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.15); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  h1 { font-size: 2rem; margin-bottom: 12px; }
+  .successo-msg { font-size: 1.05rem; color: var(--text-soft); margin-bottom: 28px; line-height: 1.6; }
+  .ordine-id-box {
+    background: rgba(200,146,42,0.08);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px 24px; margin-bottom: 16px;
+  }
+  .ordine-label { display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 4px; }
+  .ordine-id { font-family: var(--font-display); font-size: 1.8rem; font-weight: 700; color: var(--accent-light); }
+  .metodo-info {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    font-size: 0.9rem; color: var(--muted); margin-bottom: 24px;
+    padding: 10px 16px; border-radius: 99px; background: rgba(255,255,255,0.03);
+  }
+  .metodo-info.success { color: var(--success); background: rgba(39,174,96,0.08); }
+  .attesa-box {
+    display: flex; align-items: center; gap: 16px;
+    padding: 18px 20px; background: rgba(0,0,0,0.3);
+    border-radius: var(--radius-sm); margin-bottom: 32px; text-align: left;
+  }
+  .attesa-icon { font-size: 1.8rem; }
+  .attesa-box strong { display: block; margin-bottom: 2px; }
+  .attesa-box p { font-size: 0.88rem; color: var(--muted); margin: 0; }
+  .successo-actions { display: flex; flex-direction: column; gap: 12px; }
+</style>
+
+<script>
+  // sessionStorage è disponibile SOLO nel browser — mai nel server Astro
+  document.addEventListener("DOMContentLoaded", () => {
+    const tavolo = sessionStorage.getItem("puborder_tavolo") || "1";
+    const btn = document.getElementById("aggiungiAltroBtn") as HTMLAnchorElement;
+    if (btn) btn.href = `/tavolo/${tavolo}`;
+  });
+</script>

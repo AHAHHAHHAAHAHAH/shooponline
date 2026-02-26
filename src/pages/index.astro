@@ -1,0 +1,369 @@
+---
+import Layout from "../layouts/Layout.astro";
+import data from "../data/data.json";
+
+const pub = data.pub;
+const prodottiEvidenza = data.prodotti.filter(p => p.inEvidenza && p.disponibile).slice(0, 6);
+const categorie = data.categorie.filter(c => c.attiva).sort((a, b) => a.ordinamento - b.ordinamento);
+---
+
+<Layout>
+  <!-- ── HERO ── -->
+  <section class="hero">
+    <div class="hero-bg">
+      <div class="hero-overlay"></div>
+    </div>
+    <nav class="nav container">
+      <a href="/" class="nav-logo">
+        <span class="logo-text">{pub.nome}</span>
+      </a>
+      <div class="nav-actions">
+        <a href="/menu" class="btn btn-ghost btn-sm">Menu</a>
+        <a href="/tavolo/1" class="btn btn-primary btn-sm">Ordina ora</a>
+      </div>
+    </nav>
+    <div class="hero-content container">
+      <div class="hero-badge">
+        <span class="badge badge-accent">Ordina dal tavolo via QR</span>
+      </div>
+      <h1 class="hero-title">{pub.nome}</h1>
+      <p class="hero-tagline">{pub.tagline}</p>
+      <p class="hero-desc">{pub.descrizione}</p>
+      <div class="hero-actions">
+        <a href="/menu" class="btn btn-primary btn-lg">
+          <span>Sfoglia il menu</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </a>
+        <a href="#info" class="btn btn-ghost btn-lg">Scopri di più</a>
+      </div>
+    </div>
+    <div class="hero-scroll">
+      <div class="scroll-line"></div>
+    </div>
+  </section>
+
+  <!-- ── IN EVIDENZA ── -->
+  <section class="section" id="evidenza">
+    <div class="container">
+      <div class="section-header">
+        <span class="kicker">Le nostre proposte</span>
+        <h2>I preferiti del pub</h2>
+        <p>Quello che i nostri clienti non riescono a smettere di ordinare.</p>
+      </div>
+      <div class="prodotti-grid">
+        {prodottiEvidenza.map(p => (
+          <a href={`/menu#${p.id}`} class="prodotto-card card card-glow">
+            <div class="prodotto-img-wrap">
+              <img src={p.immagine} alt={p.nome} loading="lazy" onerror="this.src='/images/placeholder.svg'" />
+              {p.alcolico && <span class="alcolico-badge">🍸 {p.gradazione}</span>}
+            </div>
+            <div class="prodotto-body">
+              <div class="prodotto-cat">{data.categorie.find(c => c.id === p.categoriaId)?.emoji} {data.categorie.find(c => c.id === p.categoriaId)?.nome}</div>
+              <h3 class="prodotto-nome">{p.nome}</h3>
+              <p class="prodotto-desc">{p.descrizione}</p>
+              <div class="prodotto-footer">
+                <span class="price">{pub.currency}{p.prezzo.toFixed(2).replace('.', ',')}</span>
+                <span class="prodotto-cta">Ordina →</span>
+              </div>
+            </div>
+          </a>
+        ))}
+      </div>
+      <div style="text-align:center; margin-top:40px;">
+        <a href="/menu" class="btn btn-ghost btn-lg">Vedi tutto il menu</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── CATEGORIE ── -->
+  <section class="section section-dark">
+    <div class="container">
+      <div class="section-header">
+        <span class="kicker">Il nostro menu</span>
+        <h2>Ogni voglia, una categoria</h2>
+      </div>
+      <div class="categorie-grid">
+        {categorie.map(cat => (
+          <a href={`/menu#cat-${cat.id}`} class="cat-card card">
+            <span class="cat-emoji">{cat.emoji}</span>
+            <h3 class="cat-nome">{cat.nome}</h3>
+            <p class="cat-desc">{cat.descrizione}</p>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── COME ORDINARE ── -->
+  <section class="section">
+    <div class="container">
+      <div class="section-header">
+        <span class="kicker">Semplice come un click</span>
+        <h2>Come ordinare dal tavolo</h2>
+      </div>
+      <div class="steps-grid">
+        {[
+          { n: "01", icon: "📱", titolo: "Scansiona il QR", desc: "Ogni tavolo ha il suo QR code. Aprilo con la fotocamera del telefono, nessuna app richiesta." },
+          { n: "02", icon: "🍸", titolo: "Scegli dal menu", desc: "Sfoglia cocktail, antipasti, birre e tutto ciò che il pub offre. Leggi ingredienti e prezzi." },
+          { n: "03", icon: "🛒", titolo: "Aggiungi al carrello", desc: "Seleziona quello che vuoi, scegli le quantità, aggiungi note speciali se necessario." },
+          { n: "04", icon: "💳", titolo: "Paga o aspetta", desc: "Paga subito con carta oppure in cassa alla fine. Noi pensiamo al resto." },
+        ].map(step => (
+          <div class="step-card card">
+            <div class="step-num">{step.n}</div>
+            <div class="step-icon">{step.icon}</div>
+            <h4>{step.titolo}</h4>
+            <p>{step.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- ── INFO ── -->
+  <section class="section section-dark" id="info">
+    <div class="container">
+      <div class="info-grid">
+        <div class="info-block">
+          <span class="kicker">Dove siamo</span>
+          <h2>{pub.nome}</h2>
+          <p style="font-size:1.1rem; margin:16px 0;">{pub.indirizzo}</p>
+          <div class="contatti-list">
+            <a href={`tel:${pub.telefono}`} class="contatto-item">
+              <span>📞</span> {pub.telefono}
+            </a>
+            <a href={`https://wa.me/${pub.whatsapp.replace(/\D/g,'')}`} target="_blank" class="contatto-item">
+              <span>💬</span> WhatsApp
+            </a>
+            <a href={`mailto:${pub.email}`} class="contatto-item">
+              <span>✉️</span> {pub.email}
+            </a>
+            <a href={`https://instagram.com/${pub.social.instagram}`} target="_blank" class="contatto-item">
+              <span>📸</span> @{pub.social.instagram}
+            </a>
+          </div>
+        </div>
+        <div class="info-block">
+          <span class="kicker">Orari di apertura</span>
+          <h2>Quando ci trovi</h2>
+          <div class="orari-list" style="margin-top:24px;">
+            {pub.orari.map(o => (
+              <div class="orario-row">
+                <span class="orario-giorni">{o.giorni}</span>
+                <span class="orario-ore">{o.apertura} — {o.chiusura}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <div class="footer-logo">{pub.nome}</div>
+          <p style="margin-top:8px; font-size:0.9rem;">{pub.tagline}</p>
+        </div>
+        <div class="footer-links">
+          <a href="/menu">Menu</a>
+          <a href="/admin">Admin</a>
+          <a href={`https://instagram.com/${pub.social.instagram}`} target="_blank">Instagram</a>
+          <a href={`https://facebook.com/${pub.social.facebook}`} target="_blank">Facebook</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© {new Date().getFullYear()} {pub.nome} — P.IVA {pub.partitaIva}</span>
+        <span style="color:var(--muted)">Fatto con ❤️ in Italia</span>
+      </div>
+    </div>
+  </footer>
+</Layout>
+
+<style>
+  /* HERO */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 30% 50%, rgba(200,146,42,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 30%, rgba(200,146,42,0.05) 0%, transparent 50%);
+  }
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom, transparent 60%, var(--bg) 100%);
+  }
+  .nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 24px;
+    padding-bottom: 24px;
+  }
+  .nav-logo { display: flex; align-items: center; gap: 12px; }
+  .logo-text {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent-light);
+    letter-spacing: -0.02em;
+  }
+  .nav-actions { display: flex; gap: 12px; }
+  .hero-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 80px 24px;
+    position: relative;
+    z-index: 5;
+  }
+  .hero-badge { margin-bottom: 24px; }
+  .hero-title {
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--text) 0%, var(--accent-light) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-tagline {
+    font-family: var(--font-display);
+    font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+    color: var(--accent);
+    font-style: italic;
+    margin-bottom: 20px;
+  }
+  .hero-desc {
+    max-width: 60ch;
+    font-size: 1.05rem;
+    line-height: 1.7;
+    margin-bottom: 40px;
+    color: var(--text-soft);
+  }
+  .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .hero-scroll {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+  }
+  .scroll-line {
+    width: 1px;
+    height: 60px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    margin: 0 auto;
+    animation: pulse 2s infinite;
+  }
+
+  /* SECTION HEADERS */
+  .section-header { text-align: center; margin-bottom: 48px; }
+  .section-header h2 { margin-bottom: 12px; }
+  .section-header p { max-width: 50ch; margin: 0 auto; }
+  .section-dark { background: var(--panel); }
+
+  /* PRODOTTI GRID */
+  .prodotti-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+  }
+  .prodotto-card { overflow: hidden; display: flex; flex-direction: column; transition: transform var(--transition); }
+  .prodotto-card:hover { transform: translateY(-4px); }
+  .prodotto-img-wrap { position: relative; aspect-ratio: 16/10; overflow: hidden; }
+  .prodotto-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
+  .prodotto-card:hover .prodotto-img-wrap img { transform: scale(1.05); }
+  .alcolico-badge {
+    position: absolute; top: 12px; right: 12px;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+    padding: 4px 10px; border-radius: 99px;
+    font-size: 0.75rem; font-weight: 600; color: var(--accent-light);
+  }
+  .prodotto-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+  .prodotto-cat { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
+  .prodotto-nome { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px; color: var(--text); }
+  .prodotto-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.5; flex: 1; margin-bottom: 16px; }
+  .prodotto-footer { display: flex; align-items: center; justify-content: space-between; }
+  .prodotto-cta { font-size: 0.85rem; color: var(--accent); font-weight: 600; }
+
+  /* CATEGORIE */
+  .categorie-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .cat-card {
+    padding: 28px 20px;
+    text-align: center;
+    transition: all var(--transition);
+    cursor: pointer;
+  }
+  .cat-card:hover { background: rgba(200,146,42,0.08); border-color: var(--accent); transform: translateY(-2px); }
+  .cat-emoji { font-size: 2.5rem; display: block; margin-bottom: 12px; }
+  .cat-nome { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 8px; }
+  .cat-desc { font-size: 0.82rem; color: var(--muted); }
+
+  /* STEPS */
+  .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .step-card { padding: 32px 24px; text-align: center; }
+  .step-num { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 16px; font-family: monospace; }
+  .step-icon { font-size: 2rem; margin-bottom: 16px; }
+  .step-card h4 { font-size: 1.05rem; margin-bottom: 10px; }
+  .step-card p { font-size: 0.88rem; }
+
+  /* INFO */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; }
+  .info-block h2 { margin: 8px 0 0; }
+  .contatti-list { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+  .contatto-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-radius: var(--radius-sm);
+    background: rgba(200,146,42,0.05); border: 1px solid var(--border);
+    font-size: 0.95rem; color: var(--text-soft);
+    transition: all var(--transition);
+  }
+  .contatto-item:hover { border-color: var(--accent); color: var(--accent); }
+  .orari-list { display: flex; flex-direction: column; gap: 12px; }
+  .orario-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .orario-giorni { font-weight: 500; }
+  .orario-ore { color: var(--accent-light); font-weight: 600; font-family: var(--font-display); }
+
+  /* FOOTER */
+  .footer { background: var(--panel); border-top: 1px solid var(--border); padding: 48px 0 32px; }
+  .footer-content { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
+  .footer-logo { font-family: var(--font-display); font-size: 1.4rem; color: var(--accent-light); font-weight: 700; }
+  .footer-links { display: flex; gap: 24px; align-items: center; }
+  .footer-links a { color: var(--muted); font-size: 0.9rem; transition: color var(--transition); }
+  .footer-links a:hover { color: var(--accent); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 24px; border-top: 1px solid var(--border); font-size: 0.82rem; color: var(--muted); }
+
+  @media (max-width: 768px) {
+    .nav-actions .btn-ghost { display: none; }
+    .steps-grid { grid-template-columns: 1fr 1fr; }
+    .info-grid { grid-template-columns: 1fr; gap: 48px; }
+    .footer-content { flex-direction: column; gap: 24px; }
+    .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+  }
+  @media (max-width: 480px) {
+    .steps-grid { grid-template-columns: 1fr; }
+    .hero-actions { flex-direction: column; width: 100%; }
+    .hero-actions .btn { width: 100%; justify-content: center; }
+  }
+</style>

@@ -1,0 +1,124 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import data from "../../data/data.json";
+---
+
+<AdminLayout title="Dashboard" activeNav="dashboard">
+  <div class="page-header">
+    <h1>Dashboard</h1>
+    <p>Panoramica in tempo reale del pub</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="grid-4" style="margin-bottom:32px;">
+    <div class="stat-card">
+      <div class="stat-number" id="statOrdiniOggi">—</div>
+      <div class="stat-label">Ordini oggi</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="statIncassoOggi">—</div>
+      <div class="stat-label">Incasso oggi</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="statInAttesa">—</div>
+      <div class="stat-label">In attesa</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="statProdottiAttivi">
+        {data.prodotti.filter(p => p.disponibile).length}
+      </div>
+      <div class="stat-label">Prodotti attivi</div>
+    </div>
+  </div>
+
+  <!-- ORDINI RECENTI -->
+  <div class="card" style="padding:24px;">
+    <div class="section-title-row">
+      <h3>Ordini recenti</h3>
+      <a href="/admin/ordini" class="btn btn-ghost btn-sm">Vedi tutti</a>
+    </div>
+    <div id="ordiniRecenti">
+      <div style="text-align:center;padding:40px;color:var(--muted);">
+        <div class="spinner" style="margin:0 auto 12px;"></div>
+        Caricamento ordini...
+      </div>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .section-title-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .section-title-row h3 { font-size: 1.2rem; }
+  .ordine-row { display: flex; align-items: center; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .ordine-row:last-child { border-bottom: none; }
+  .ordine-num { font-weight: 700; color: var(--accent-light); font-family: var(--font-display); min-width: 40px; }
+  .ordine-tavolo { font-size: 0.85rem; color: var(--muted); min-width: 80px; }
+  .ordine-items { flex: 1; font-size: 0.9rem; }
+  .ordine-totale { font-weight: 700; }
+  .ordine-stato { padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 700; }
+  .ordine-time { font-size: 0.78rem; color: var(--muted); min-width: 60px; text-align: right; }
+</style>
+
+<script>
+  import { getFirebaseClient } from "../../lib/firebase-client";
+  import { getAuth, onAuthStateChanged } from "firebase/auth";
+  import { getFirestore, collection, query, orderBy, limit, onSnapshot, where, Timestamp } from "firebase/firestore";
+
+  const { db, auth } = getFirebaseClient();
+
+  onAuthStateChanged(auth, (user) => {
+    if (!user) { window.location.href = "/admin"; return; }
+    loadDashboard();
+  });
+
+  function formatTime(ts: any): string {
+    if (!ts) return "—";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function loadDashboard() {
+    const oggi = new Date();
+    oggi.setHours(0,0,0,0);
+    const oggiTs = Timestamp.fromDate(oggi);
+
+    const statiLabel: Record<string, string> = {
+      in_attesa: "In attesa", confermato: "Confermato",
+      in_preparazione: "In preparazione", pronto: "Pronto",
+      consegnato: "Consegnato", annullato: "Annullato"
+    };
+
+    // Ordini di oggi
+    const qOggi = query(collection(db, "ordini"), where("creatoAt", ">=", oggiTs));
+    onSnapshot(qOggi, (snap) => {
+      const ordini = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      document.getElementById("statOrdiniOggi")!.textContent = String(ordini.filter(o => o.stato !== "annullato").length);
+      const incasso = ordini.filter(o => o.pagato).reduce((s: number, o: any) => s + (o.totale || 0), 0);
+      document.getElementById("statIncassoOggi")!.textContent = `€ ${incasso.toFixed(2).replace('.', ',')}`;
+      document.getElementById("statInAttesa")!.textContent = String(ordini.filter(o => o.stato === "in_attesa").length);
+    });
+
+    // Ultimi 8 ordini
+    const qRecenti = query(collection(db, "ordini"), orderBy("creatoAt", "desc"), limit(8));
+    onSnapshot(qRecenti, (snap) => {
+      const ordini = snap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
+      const container = document.getElementById("ordiniRecenti")!;
+
+      if (ordini.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);">Nessun ordine ancora</div>`;
+        return;
+      }
+
+      container.innerHTML = ordini.map(o => `
+        <div class="ordine-row">
+          <span class="ordine-num">#${o.id.slice(-4).toUpperCase()}</span>
+          <span class="ordine-tavolo">Tavolo ${o.numeroTavolo}</span>
+          <span class="ordine-items">${(o.items || []).length} prodotti</span>
+          <span class="ordine-totale">€ ${(o.totale || 0).toFixed(2).replace('.', ',')}</span>
+          <span class="ordine-stato stato-${o.stato}">${statiLabel[o.stato] || o.stato}</span>
+          <span class="ordine-time">${formatTime(o.creatoAt)}</span>
+        </div>
+      `).join("");
+    });
+  }
+</script>

@@ -1,0 +1,282 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import data from "../../data/data.json";
+
+const { numero } = Astro.params;
+const tavolo = data.tavoli.find(t => t.numero === parseInt(numero || "0"));
+const pub = data.pub;
+const categorie = data.categorie.filter(c => c.attiva).sort((a,b) => a.ordinamento - b.ordinamento);
+const prodotti = data.prodotti.filter(p => p.disponibile);
+
+if (!tavolo || !tavolo.attivo) {
+  return Astro.redirect("/menu");
+}
+---
+
+<Layout
+  title={`${tavolo.nome} — Ordina | ${pub.nome}`}
+  description={`Ordina dal ${tavolo.nome}. Menu completo di ${pub.nome}.`}
+  noIndex={true}
+>
+  <!-- Salviamo il numero tavolo nel sessionStorage appena si apre la pagina -->
+  <script define:vars={{ numeroTavolo: tavolo.numero }}>
+    sessionStorage.setItem("puborder_tavolo", String(numeroTavolo));
+  </script>
+
+  <div class="tavolo-page">
+    <!-- HEADER TAVOLO -->
+    <div class="tavolo-header">
+      <div class="container tavolo-header-inner">
+        <div class="tavolo-info">
+          <div class="tavolo-badge">🪑 {tavolo.nome}</div>
+          <div class="tavolo-pub">{pub.nome}</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="window.location.href='/menu'">
+          Vedi solo il menu
+        </button>
+      </div>
+    </div>
+
+    <!-- BENVENUTO -->
+    <div class="welcome-banner container">
+      <div class="welcome-icon">👋</div>
+      <div>
+        <h2>Benvenuto al {tavolo.nome}!</h2>
+        <p>Scegli quello che vuoi, aggiungilo al carrello e decidi se pagare subito o in cassa.</p>
+        <div class="tempo-attesa">
+          <span>⏱</span> Tempo medio: <strong>{pub.tempoAttesaMedio}</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- STICKY CATEGORY TABS -->
+    <div class="cat-tabs-wrap">
+      <div class="cat-tabs container">
+        {categorie.map(cat => (
+          <a href={`#cat-${cat.id}`} class="cat-tab">
+            <span>{cat.emoji}</span> {cat.nome}
+          </a>
+        ))}
+      </div>
+    </div>
+
+    <!-- PRODOTTI -->
+    <div class="container menu-content">
+      {categorie.map(cat => {
+        const items = prodotti.filter(p => p.categoriaId === cat.id);
+        if (items.length === 0) return null;
+        return (
+          <div id={`cat-${cat.id}`} class="cat-section">
+            <div class="cat-header">
+              <span class="cat-emoji-lg">{cat.emoji}</span>
+              <div>
+                <h2>{cat.nome}</h2>
+                <p>{cat.descrizione}</p>
+              </div>
+            </div>
+            <div class="items-grid">
+              {items.map(p => (
+                <div class="menu-item card">
+                  <div class="item-img-wrap">
+                    <img src={p.immagine} alt={p.nome} loading="lazy" onerror="this.src='/images/placeholder.svg'" />
+                    {p.alcolico && <span class="alcolico-badge">🍸 {p.gradazione}</span>}
+                  </div>
+                  <div class="item-body">
+                    <h3 class="item-nome">{p.nome}</h3>
+                    <p class="item-desc">{p.descrizione}</p>
+                    {p.allergeni.length > 0 && (
+                      <div class="item-allergeni">
+                        ⚠️ {p.allergeni.join(", ")}
+                      </div>
+                    )}
+                    <div class="item-footer">
+                      <span class="price">{pub.currency}{p.prezzo.toFixed(2).replace('.', ',')}</span>
+                      <div class="qty-ctrl" id={`qty-${p.id}`} style="display:none;">
+                        <button class="qty-btn minus" data-id={p.id}>−</button>
+                        <span class="qty-val" id={`qty-val-${p.id}`}>0</span>
+                        <button class="qty-btn plus" data-id={p.id}>+</button>
+                      </div>
+                      <button
+                        class="btn btn-primary btn-sm add-btn"
+                        data-id={p.id}
+                        data-nome={p.nome}
+                        data-prezzo={p.prezzo}
+                        data-img={p.immagine}
+                        id={`add-${p.id}`}
+                      >
+                        + Aggiungi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+
+    <!-- CART FAB -->
+    <div class="cart-fab-wrap" id="cartFab" style="display:none;">
+      <button class="cart-fab-btn btn btn-primary" id="goToCheckout">
+        <span class="cart-count-badge" id="cartCount">0</span>
+        <span>🛒 Vai al carrello</span>
+        <span class="cart-total-fab" id="cartTotal">€ 0,00</span>
+      </button>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .tavolo-page { min-height: 100vh; }
+
+  .tavolo-header {
+    background: rgba(10,8,0,0.95);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 50;
+  }
+  .tavolo-header-inner { display: flex; align-items: center; justify-content: space-between; padding-top: 16px; padding-bottom: 16px; }
+  .tavolo-badge { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); margin-bottom: 2px; }
+  .tavolo-pub { font-family: var(--font-display); font-size: 1.2rem; color: var(--text); }
+
+  .welcome-banner {
+    display: flex; align-items: flex-start; gap: 20px;
+    background: rgba(200,146,42,0.05); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px; margin: 24px 24px 0;
+  }
+  .welcome-icon { font-size: 2rem; flex-shrink: 0; }
+  .welcome-banner h2 { font-size: 1.4rem; margin-bottom: 6px; }
+  .welcome-banner p { font-size: 0.9rem; margin-bottom: 10px; }
+  .tempo-attesa { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .tempo-attesa strong { color: var(--accent); }
+
+  .cat-tabs-wrap { position: sticky; top: 73px; z-index: 40; background: var(--bg); border-bottom: 1px solid var(--border); }
+  .cat-tabs { display: flex; gap: 4px; overflow-x: auto; padding: 10px 24px; scrollbar-width: none; }
+  .cat-tabs::-webkit-scrollbar { display: none; }
+  .cat-tab { display: flex; align-items: center; gap: 6px; white-space: nowrap; padding: 7px 14px; border-radius: 99px; font-size: 0.82rem; font-weight: 600; color: var(--muted); border: 1px solid transparent; transition: all var(--transition); }
+  .cat-tab:hover, .cat-tab.active { color: var(--accent); border-color: var(--border); background: rgba(200,146,42,0.08); }
+
+  .menu-content { padding: 32px 24px 140px; }
+  .cat-section { margin-bottom: 56px; }
+  .cat-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+  .cat-emoji-lg { font-size: 2.5rem; }
+  .cat-header h2 { font-size: 1.6rem; margin-bottom: 2px; }
+
+  .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .menu-item { overflow: hidden; }
+  .item-img-wrap { position: relative; aspect-ratio: 4/3; overflow: hidden; }
+  .item-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .alcolico-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.8); padding: 3px 8px; border-radius: 99px; font-size: 0.7rem; font-weight: 600; color: var(--accent-light); }
+  .item-body { padding: 14px; }
+  .item-nome { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 6px; }
+  .item-desc { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+  .item-allergeni { font-size: 0.75rem; color: #e67e22; margin-bottom: 10px; }
+  .item-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+  /* QUANTITY CONTROL */
+  .qty-ctrl { display: flex; align-items: center; gap: 8px; }
+  .qty-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--panel2); color: var(--text); font-size: 1.1rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all var(--transition); }
+  .qty-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .qty-val { font-weight: 700; min-width: 20px; text-align: center; font-size: 1rem; color: var(--accent-light); }
+
+  /* CART FAB */
+  .cart-fab-wrap { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 100; }
+  .cart-fab-btn { display: flex; align-items: center; gap: 10px; padding: 14px 24px; border-radius: 99px; font-size: 0.95rem; box-shadow: 0 8px 32px rgba(200,146,42,0.5); white-space: nowrap; }
+  .cart-count-badge { background: rgba(0,0,0,0.3); padding: 2px 8px; border-radius: 99px; font-size: 0.85rem; font-weight: 800; }
+  .cart-total-fab { font-family: var(--font-display); font-weight: 700; }
+
+  @media (max-width: 480px) {
+    .items-grid { grid-template-columns: 1fr; }
+    .welcome-banner { flex-direction: column; gap: 12px; }
+  }
+</style>
+
+<script>
+  const CART_KEY = "puborder_cart";
+
+  interface CartItem { id: string; nome: string; prezzo: number; immagine: string; quantita: number; }
+
+  function getCart(): CartItem[] {
+    try { return JSON.parse(localStorage.getItem(CART_KEY) || "[]"); } catch { return []; }
+  }
+  function saveCart(c: CartItem[]) { localStorage.setItem(CART_KEY, JSON.stringify(c)); }
+
+  function updateCartUI() {
+    const cart = getCart();
+    const total = cart.reduce((s, i) => s + i.prezzo * i.quantita, 0);
+    const count = cart.reduce((s, i) => s + i.quantita, 0);
+    const fab = document.getElementById("cartFab");
+    if (fab) fab.style.display = count > 0 ? "flex" : "none";
+    const countEl = document.getElementById("cartCount");
+    const totalEl = document.getElementById("cartTotal");
+    if (countEl) countEl.textContent = String(count);
+    if (totalEl) totalEl.textContent = `€ ${total.toFixed(2).replace(".", ",")}`;
+
+    // Aggiorna qty controls
+    cart.forEach(item => {
+      const qtyWrap = document.getElementById(`qty-${item.id}`);
+      const qtyVal = document.getElementById(`qty-val-${item.id}`);
+      const addBtn = document.getElementById(`add-${item.id}`);
+      if (qtyVal) qtyVal.textContent = String(item.quantita);
+      if (qtyWrap) qtyWrap.style.display = "flex";
+      if (addBtn) addBtn.style.display = "none";
+    });
+  }
+
+  function addItem(id: string, nome: string, prezzo: number, immagine: string) {
+    const cart = getCart();
+    const idx = cart.findIndex(i => i.id === id);
+    if (idx >= 0) cart[idx].quantita += 1;
+    else cart.push({ id, nome, prezzo, immagine, quantita: 1 });
+    saveCart(cart);
+    updateCartUI();
+  }
+
+  function removeItem(id: string) {
+    const cart = getCart();
+    const idx = cart.findIndex(i => i.id === id);
+    if (idx >= 0) {
+      if (cart[idx].quantita > 1) cart[idx].quantita -= 1;
+      else {
+        cart.splice(idx, 1);
+        // Ripristina il bottone aggiungi
+        const qtyWrap = document.getElementById(`qty-${id}`);
+        const addBtn = document.getElementById(`add-${id}`);
+        if (qtyWrap) qtyWrap.style.display = "none";
+        if (addBtn) addBtn.style.display = "flex";
+      }
+    }
+    saveCart(cart);
+    updateCartUI();
+  }
+
+  // Event listeners
+  document.querySelectorAll(".add-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const b = btn as HTMLButtonElement;
+      addItem(b.dataset.id!, b.dataset.nome!, parseFloat(b.dataset.prezzo!), b.dataset.img!);
+    });
+  });
+
+  document.querySelectorAll(".qty-btn.plus").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = (btn as HTMLButtonElement).dataset.id!;
+      const cart = getCart();
+      const item = cart.find(i => i.id === id);
+      if (item) addItem(id, item.nome, item.prezzo, item.immagine);
+    });
+  });
+
+  document.querySelectorAll(".qty-btn.minus").forEach(btn => {
+    btn.addEventListener("click", () => {
+      removeItem((btn as HTMLButtonElement).dataset.id!);
+    });
+  });
+
+  document.getElementById("goToCheckout")?.addEventListener("click", () => {
+    window.location.href = "/checkout";
+  });
+
+  updateCartUI();
+</script>

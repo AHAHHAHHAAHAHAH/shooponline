@@ -1,0 +1,306 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import data from "../../data/data.json";
+
+const categorie = data.categorie;
+const prodottiJson = JSON.stringify(data.prodotti);
+const categorieJson = JSON.stringify(categorie);
+---
+
+<AdminLayout title="Gestione Prodotti" activeNav="prodotti">
+  <div class="page-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <h1>Prodotti</h1>
+        <p>Aggiungi, modifica e gestisci il menu</p>
+      </div>
+      <button class="btn btn-primary" id="btnNuovoProdotto">+ Nuovo prodotto</button>
+    </div>
+  </div>
+
+  <!-- FILTRI -->
+  <div class="filtri-bar">
+    <input type="text" id="searchInput" class="input" placeholder="Cerca prodotto..." style="max-width:280px;" />
+    <select id="filtroCat" class="input" style="max-width:200px;">
+      <option value="">Tutte le categorie</option>
+      {categorie.map(c => <option value={c.id}>{c.emoji} {c.nome}</option>)}
+    </select>
+    <select id="filtroDisp" class="input" style="max-width:180px;">
+      <option value="">Tutti</option>
+      <option value="1">Disponibili</option>
+      <option value="0">Non disponibili</option>
+    </select>
+  </div>
+
+  <!-- TABELLA PRODOTTI -->
+  <div class="card" style="overflow:hidden;">
+    <table class="table-admin" id="prodottiTable">
+      <thead>
+        <tr>
+          <th>Prodotto</th>
+          <th>Categoria</th>
+          <th>Prezzo</th>
+          <th>Stato</th>
+          <th>In evidenza</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="prodottiBody"></tbody>
+    </table>
+  </div>
+
+  <!-- MODAL PRODOTTO -->
+  <div id="prodottoModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 id="modalTitle">Nuovo prodotto</h3>
+        <button id="closeModal" class="modal-close">✕</button>
+      </div>
+      <form id="prodottoForm" class="modal-body">
+        <input type="hidden" id="prodottoId" />
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="label">Nome prodotto *</label>
+            <input type="text" id="fNome" class="input" required />
+          </div>
+          <div class="form-group">
+            <label class="label">Categoria *</label>
+            <select id="fCategoria" class="input" required>
+              {categorie.map(c => <option value={c.id}>{c.emoji} {c.nome}</option>)}
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="label">Prezzo (€) *</label>
+            <input type="number" id="fPrezzo" class="input" step="0.50" min="0" required />
+          </div>
+          <div class="form-group">
+            <label class="label">Gradazione alcolica</label>
+            <input type="text" id="fGradazione" class="input" placeholder="es. 12° (vuoto se analcolico)" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="label">Descrizione *</label>
+            <textarea id="fDescrizione" class="input" rows="3" required></textarea>
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="label">URL Immagine</label>
+            <input type="url" id="fImmagine" class="input" placeholder="/images/prodotti/nome.jpg" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="label">Allergeni (separati da virgola)</label>
+            <input type="text" id="fAllergeni" class="input" placeholder="glutine, latte, uova" />
+          </div>
+          <div class="form-group" style="grid-column:1/-1;">
+            <label class="label">Tag (separati da virgola)</label>
+            <input type="text" id="fTag" class="input" placeholder="classico, fresco, signature" />
+          </div>
+          <div class="form-group checkboxes" style="grid-column:1/-1;">
+            <label class="checkbox-label">
+              <input type="checkbox" id="fDisponibile" checked /> Disponibile
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="fEvidenza" /> In evidenza (homepage)
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="fAlcolico" /> Alcolico
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" id="cancelModal" class="btn btn-ghost">Annulla</button>
+          <button type="submit" class="btn btn-primary" id="saveProdotto">Salva prodotto</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</AdminLayout>
+
+<style>
+  .filtri-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .prodotto-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
+  .prodotto-nome-cell { display: flex; align-items: center; gap: 12px; }
+  .toggle-switch { position: relative; width: 40px; height: 22px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,0.1); border-radius: 22px; cursor: pointer; transition: 0.3s; }
+  .toggle-slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  .toggle-switch input:checked + .toggle-slider { background: var(--success); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+  /* MODAL */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  .modal-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0; }
+  .modal-header h3 { font-size: 1.3rem; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 4px; }
+  .modal-body { padding: 24px; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 8px; }
+  .checkboxes { display: flex; gap: 20px; align-items: center; }
+  .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .azioni-cell { display: flex; gap: 8px; }
+</style>
+
+<script define:vars={{ prodottiJson, categorieJson }}>
+  import { getFirebaseClient } from "../../lib/firebase-client";
+  import { onAuthStateChanged } from "firebase/auth";
+
+  const { auth } = getFirebaseClient();
+  onAuthStateChanged(auth, (user) => { if (!user) window.location.href = "/admin"; });
+
+  let prodotti = JSON.parse(prodottiJson);
+  const categorie = JSON.parse(categorieJson);
+  let filteredProdotti = [...prodotti];
+
+  const catMap = Object.fromEntries(categorie.map((c: any) => [c.id, c]));
+
+  function renderTable() {
+    const tbody = document.getElementById("prodottiBody")!;
+    tbody.innerHTML = filteredProdotti.map(p => `
+      <tr>
+        <td class="prodotto-nome-cell">
+          <img class="prodotto-thumb" src="${p.immagine || '/images/placeholder.svg'}" alt="${p.nome}" onerror="this.src='/images/placeholder.svg'" />
+          <span>${p.nome}</span>
+        </td>
+        <td>${catMap[p.categoriaId]?.emoji || ""} ${catMap[p.categoriaId]?.nome || p.categoriaId}</td>
+        <td><strong>€ ${p.prezzo.toFixed(2).replace('.', ',')}</strong></td>
+        <td>
+          <label class="toggle-switch" title="${p.disponibile ? 'Disponibile' : 'Non disponibile'}">
+            <input type="checkbox" ${p.disponibile ? 'checked' : ''} onchange="toggleDisponibile('${p.id}', this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+        </td>
+        <td>
+          <label class="toggle-switch">
+            <input type="checkbox" ${p.inEvidenza ? 'checked' : ''} onchange="toggleEvidenza('${p.id}', this.checked)" />
+            <span class="toggle-slider"></span>
+          </label>
+        </td>
+        <td class="azioni-cell">
+          <button class="btn btn-ghost btn-sm" onclick="editProdotto('${p.id}')">✏️ Modifica</button>
+          <button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);" onclick="deleteProdotto('${p.id}')">🗑</button>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function applyFilters() {
+    const search = (document.getElementById("searchInput") as HTMLInputElement).value.toLowerCase();
+    const cat = (document.getElementById("filtroCat") as HTMLSelectElement).value;
+    const disp = (document.getElementById("filtroDisp") as HTMLSelectElement).value;
+    filteredProdotti = prodotti.filter((p: any) => {
+      if (search && !p.nome.toLowerCase().includes(search) && !p.descrizione.toLowerCase().includes(search)) return false;
+      if (cat && p.categoriaId !== cat) return false;
+      if (disp === "1" && !p.disponibile) return false;
+      if (disp === "0" && p.disponibile) return false;
+      return true;
+    });
+    renderTable();
+  }
+
+  ["searchInput", "filtroCat", "filtroDisp"].forEach(id => {
+    document.getElementById(id)?.addEventListener("input", applyFilters);
+    document.getElementById(id)?.addEventListener("change", applyFilters);
+  });
+
+  // Modal
+  const modal = document.getElementById("prodottoModal")!;
+  const form = document.getElementById("prodottoForm") as HTMLFormElement;
+
+  function openModal(prodotto?: any) {
+    const title = document.getElementById("modalTitle")!;
+    title.textContent = prodotto ? "Modifica prodotto" : "Nuovo prodotto";
+    (document.getElementById("prodottoId") as HTMLInputElement).value = prodotto?.id || "";
+    (document.getElementById("fNome") as HTMLInputElement).value = prodotto?.nome || "";
+    (document.getElementById("fCategoria") as HTMLSelectElement).value = prodotto?.categoriaId || "";
+    (document.getElementById("fPrezzo") as HTMLInputElement).value = prodotto?.prezzo || "";
+    (document.getElementById("fDescrizione") as HTMLTextAreaElement).value = prodotto?.descrizione || "";
+    (document.getElementById("fImmagine") as HTMLInputElement).value = prodotto?.immagine || "";
+    (document.getElementById("fAllergeni") as HTMLInputElement).value = (prodotto?.allergeni || []).join(", ");
+    (document.getElementById("fTag") as HTMLInputElement).value = (prodotto?.tag || []).join(", ");
+    (document.getElementById("fGradazione") as HTMLInputElement).value = prodotto?.gradazione || "";
+    (document.getElementById("fDisponibile") as HTMLInputElement).checked = prodotto?.disponibile !== false;
+    (document.getElementById("fEvidenza") as HTMLInputElement).checked = prodotto?.inEvidenza || false;
+    (document.getElementById("fAlcolico") as HTMLInputElement).checked = prodotto?.alcolico || false;
+    modal.style.display = "flex";
+  }
+
+  document.getElementById("btnNuovoProdotto")?.addEventListener("click", () => openModal());
+  document.getElementById("closeModal")?.addEventListener("click", () => modal.style.display = "none");
+  document.getElementById("cancelModal")?.addEventListener("click", () => modal.style.display = "none");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = (document.getElementById("prodottoId") as HTMLInputElement).value;
+    const nuovoProdotto = {
+      id: id || `prod-${Date.now()}`,
+      nome: (document.getElementById("fNome") as HTMLInputElement).value,
+      categoriaId: (document.getElementById("fCategoria") as HTMLSelectElement).value,
+      prezzo: parseFloat((document.getElementById("fPrezzo") as HTMLInputElement).value),
+      descrizione: (document.getElementById("fDescrizione") as HTMLTextAreaElement).value,
+      immagine: (document.getElementById("fImmagine") as HTMLInputElement).value || "/images/placeholder.svg",
+      allergeni: (document.getElementById("fAllergeni") as HTMLInputElement).value.split(",").map(s => s.trim()).filter(Boolean),
+      tag: (document.getElementById("fTag") as HTMLInputElement).value.split(",").map(s => s.trim()).filter(Boolean),
+      gradazione: (document.getElementById("fGradazione") as HTMLInputElement).value || null,
+      disponibile: (document.getElementById("fDisponibile") as HTMLInputElement).checked,
+      inEvidenza: (document.getElementById("fEvidenza") as HTMLInputElement).checked,
+      alcolico: (document.getElementById("fAlcolico") as HTMLInputElement).checked,
+    };
+
+    // Salva via API
+    const res = await fetch("/api/admin/salva-prodotto", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(nuovoProdotto),
+    });
+
+    if (res.ok) {
+      const idx = prodotti.findIndex((p: any) => p.id === id);
+      if (idx >= 0) prodotti[idx] = nuovoProdotto;
+      else prodotti.push(nuovoProdotto);
+      applyFilters();
+      modal.style.display = "none";
+    } else {
+      alert("Errore nel salvataggio. Riprova.");
+    }
+  });
+
+  (window as any).editProdotto = (id: string) => {
+    const p = prodotti.find((p: any) => p.id === id);
+    if (p) openModal(p);
+  };
+
+  (window as any).toggleDisponibile = async (id: string, val: boolean) => {
+    const idx = prodotti.findIndex((p: any) => p.id === id);
+    if (idx >= 0) {
+      prodotti[idx].disponibile = val;
+      await fetch("/api/admin/salva-prodotto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prodotti[idx]),
+      });
+    }
+  };
+
+  (window as any).toggleEvidenza = async (id: string, val: boolean) => {
+    const idx = prodotti.findIndex((p: any) => p.id === id);
+    if (idx >= 0) {
+      prodotti[idx].inEvidenza = val;
+      await fetch("/api/admin/salva-prodotto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(prodotti[idx]),
+      });
+    }
+  };
+
+  (window as any).deleteProdotto = async (id: string) => {
+    if (!confirm("Sei sicuro di voler eliminare questo prodotto?")) return;
+    const res = await fetch(`/api/admin/elimina-prodotto?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      prodotti = prodotti.filter((p: any) => p.id !== id);
+      applyFilters();
+    }
+  };
+
+  renderTable();
+</script>

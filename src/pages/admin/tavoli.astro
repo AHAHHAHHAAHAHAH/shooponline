@@ -1,0 +1,92 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import data from "../../data/data.json";
+
+const pub = data.pub;
+const tavoli = data.tavoli;
+---
+
+<AdminLayout title="Tavoli & QR Code" activeNav="tavoli">
+  <div class="page-header">
+    <h1>Tavoli & QR Code</h1>
+    <p>Genera i QR code da stampare e posizionare sui tavoli</p>
+  </div>
+
+  <div class="tavoli-grid">
+    {tavoli.map(t => (
+      <div class={`tavolo-card card ${!t.attivo ? 'tavolo-inattivo' : ''}`}>
+        <div class="tavolo-card-header">
+          <div>
+            <div class="tavolo-zona">{t.zona}</div>
+            <h3>{t.nome}</h3>
+            <div class="tavolo-posti">👥 {t.posti} posti</div>
+          </div>
+          <label class="toggle-switch" title={t.attivo ? "Attivo" : "Disabilitato"}>
+            <input type="checkbox" checked={t.attivo} data-numero={t.numero} class="tavolo-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="qr-preview">
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${pub.website}/tavolo/${t.numero}&margin=10`}
+            alt={`QR Tavolo ${t.numero}`}
+            loading="lazy"
+          />
+        </div>
+
+        <div class="tavolo-url">
+          {pub.website}/tavolo/{t.numero}
+        </div>
+
+        <div class="tavolo-actions">
+          <a
+            href={`https://api.qrserver.com/v1/create-qr-code/?size=800x800&data=${pub.website}/tavolo/${t.numero}&margin=20`}
+            download={`qr-tavolo-${t.numero}.png`}
+            target="_blank"
+            class="btn btn-primary btn-sm"
+          >
+            ⬇ Scarica QR
+          </a>
+          <button
+            class="btn btn-ghost btn-sm"
+            onclick={`window.open('/tavolo/${t.numero}', '_blank')`}
+          >
+            👁 Anteprima
+          </button>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <div style="margin-top:32px;">
+    <button class="btn btn-primary" id="btnStampaTutti">
+      🖨 Stampa tutti i QR code
+    </button>
+  </div>
+</AdminLayout>
+
+<style>
+  .tavoli-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 20px; }
+  .tavolo-card { padding: 20px; }
+  .tavolo-inattivo { opacity: 0.5; }
+  .tavolo-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+  .tavolo-zona { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--accent); font-weight: 700; margin-bottom: 4px; }
+  .tavolo-card h3 { font-size: 1.2rem; }
+  .tavolo-posti { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+  .qr-preview { background: #fff; border-radius: var(--radius-sm); padding: 12px; margin: 16px 0; display: flex; align-items: center; justify-content: center; }
+  .qr-preview img { max-width: 140px; }
+  .tavolo-url { font-size: 0.72rem; color: var(--muted); text-align: center; margin-bottom: 16px; font-family: monospace; word-break: break-all; }
+  .tavolo-actions { display: flex; gap: 8px; }
+  .tavolo-actions .btn { flex: 1; }
+  .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider { position: absolute; inset: 0; background: rgba(255,255,255,0.1); border-radius: 22px; cursor: pointer; transition: 0.3s; }
+  .toggle-slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
+  .toggle-switch input:checked + .toggle-slider { background: var(--success); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+</style>
+
+<script>
+  document.getElementById("btnStampaTutti")?.addEventListener("click", () => window.print());
+</script>

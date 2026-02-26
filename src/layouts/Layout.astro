@@ -1,0 +1,95 @@
+---
+import "../styles/global.css";
+import data from "../data/data.json";
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  noIndex?: boolean;
+}
+
+const { 
+  title = data.seo.titolo,
+  description = data.seo.descrizione,
+  ogImage = data.pub.ogImage,
+  noIndex = false
+} = Astro.props;
+
+const pub = data.pub;
+const siteUrl = pub.website;
+const canonicalUrl = new URL(Astro.url.pathname, siteUrl).href;
+
+const schemaOrg = {
+  "@context": "https://schema.org",
+  "@type": "BarOrPub",
+  "name": pub.nome,
+  "description": pub.descrizione,
+  "url": siteUrl,
+  "telephone": pub.telefono,
+  "email": pub.email,
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": pub.indirizzo.split(",")[0],
+    "addressLocality": "Milano",
+    "addressCountry": "IT"
+  },
+  "servesCuisine": ["Cocktail", "Antipasti", "Cucina Italiana"],
+  "priceRange": "€€",
+  "openingHoursSpecification": pub.orari.map(o => ({
+    "@type": "OpeningHoursSpecification",
+    "name": o.giorni,
+    "opens": o.apertura,
+    "closes": o.chiusura
+  })),
+  "sameAs": [
+    `https://instagram.com/${pub.social.instagram}`,
+    `https://facebook.com/${pub.social.facebook}`
+  ],
+  "hasMenu": `${siteUrl}/menu`,
+  "acceptsReservations": false,
+  "paymentAccepted": "Cash, Credit Card",
+  "currenciesAccepted": "EUR",
+  "image": `${siteUrl}${pub.ogImage}`
+};
+---
+
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>{title}</title>
+  <meta name="description" content={description} />
+  <meta name="keywords" content={data.seo.keywords} />
+  <meta name="author" content={pub.nome} />
+  {noIndex && <meta name="robots" content="noindex, nofollow" />}
+  <link rel="canonical" href={canonicalUrl} />
+
+  <meta name="theme-color" content="#0a0800" />
+
+  <meta property="og:type" content="restaurant" />
+  <meta property="og:url" content={canonicalUrl} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:image" content={`${siteUrl}${ogImage}`} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:site_name" content={pub.nome} />
+  <meta property="og:locale" content="it_IT" />
+
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
+
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <script type="application/ld+json" set:html={JSON.stringify(schemaOrg)} />
+</head>
+<body>
+  <slot />
+</body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "puborder",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^4.0.0",
+    "@astrojs/node": "^8.0.0",
+    "@astrojs/sitemap": "^3.0.0",
+    "firebase": "^10.0.0",
+    "firebase-admin": "^12.0.0",
+    "stripe": "^14.0.0",
+    "@stripe/stripe-js": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}

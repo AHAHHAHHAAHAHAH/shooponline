@@ -1,0 +1,146 @@
+---
+import AdminLayout from "../../layouts/AdminLayout.astro";
+import { getAdminDb } from "../../lib/firebase-admin";
+
+// Caricamento iniziale lato server (SSR)
+const db = getAdminDb();
+const ordiniSnapshot = await db.collection("ordini")
+  .orderBy("creatoAt", "desc")
+  .limit(50)
+  .get();
+
+const ordiniIniziali = ordiniSnapshot.docs.map(doc => ({
+  id: doc.id,
+  ...doc.data()
+}));
+---
+
+<AdminLayout title="Gestione Ordini">
+  <div class="admin-header">
+    <h1>Ordini in arrivo</h1>
+    <div class="status-badge">🟢 In ascolto...</div>
+  </div>
+
+  <div class="ordini-grid" id="ordiniContainer">
+    {/* Gli ordini verranno renderizzati e aggiornati qui da JS */}
+  </div>
+
+  <audio id="notificationSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+</AdminLayout>
+
+<style>
+  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .status-badge { background: #2ecc71; color: #111; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; animation: pulse 2s infinite; }
+  .ordini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+  
+  /* Stili generici per le card degli ordini */
+  :global(.ordine-card) { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  :global(.ordine-header) { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  :global(.tavolo-badge) { background: var(--accent); color: #000; padding: 4px 10px; border-radius: 4px; font-weight: 900; font-size: 1.2rem; }
+  :global(.stato-badge) { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+  :global(.stato-in_attesa) { background: #f39c12; color: #fff; }
+  :global(.stato-ricevuto) { background: #2ecc71; color: #fff; }
+  :global(.items-list) { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; }
+  :global(.items-list li) { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
+  :global(.ordine-footer) { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 12px; font-weight: bold; }
+  
+  @keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+</style>
+
+<script>
+  import { getFirebaseClient } from "../../lib/firebase-client";
+  import { collection, query, orderBy, limit, onSnapshot, updateDoc, doc } from "firebase/firestore";
+
+  const { db } = getFirebaseClient();
+  const container = document.getElementById("ordiniContainer")!;
+  const sound = document.getElementById("notificationSound") as HTMLAudioElement;
+  
+  let isFirstLoad = true;
+
+  // Query per ascoltare gli ordini in tempo reale
+  const q = query(collection(db, "ordini"), orderBy("creatoAt", "desc"), limit(50));
+
+  onSnapshot(q, (snapshot) => {
+    // 1. Suona la notifica se c'è un NUOVO ordine (e non è il caricamento iniziale della pagina)
+    if (!isFirstLoad) {
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          sound.play().catch(e => console.log("Impossibile riprodurre audio in automatico", e));
+        }
+      });
+    }
+    isFirstLoad = false;
+
+    // 2. Ridisegna la lista degli ordini
+    container.innerHTML = ""; // Svuota contenitore
+
+    snapshot.docs.forEach((documento) => {
+      const ordine = documento.data();
+      const id = documento.id;
+      
+      const card = document.createElement("div");
+      card.className = "ordine-card";
+      
+      // Formattazione data
+      const dataFormat = ordine.creatoAt?.toDate ? 
+        ordine.creatoAt.toDate().toLocaleTimeString() : "Ora sconosciuta";
+
+      const itemsHtml = ordine.items.map((i: any) => `
+        <li>
+          <span>${i.quantita}x ${i.nomeProdotto}</span>
+          <span>€${i.totaleRiga.toFixed(2)}</span>
+        </li>
+      `).join("");
+
+      // Creazione HTML della card
+      card.innerHTML = `
+        <div class="ordine-header">
+          <span class="tavolo-badge">Tavolo ${ordine.numeroTavolo}</span>
+          <span class="stato-badge stato-${ordine.stato}">
+            ${ordine.stato === 'in_attesa' ? '⏳ In Attesa' : '✅ Ricevuto'}
+          </span>
+        </div>
+        <div>
+          <small style="color: gray;">Ordine: ${id.slice(-6)} • Ore: ${dataFormat}</small>
+          <br/>
+          <small>Metodo: <strong>${ordine.metodoPagamento.toUpperCase()}</strong> - Pagato: ${ordine.pagato ? 'Sì' : 'No'}</small>
+        </div>
+        <ul class="items-list">
+          ${itemsHtml}
+        </ul>
+        ${ordine.noteOrdine ? `<div style="background: rgba(231, 76, 60, 0.2); padding: 8px; border-radius: 4px; font-size:0.85rem;"><strong>Note:</strong> ${ordine.noteOrdine}</div>` : ''}
+        <div class="ordine-footer">
+          <span>Totale:</span>
+          <span>€${ordine.totale.toFixed(2)}</span>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 12px;">
+          ${ordine.stato === 'in_attesa' ? 
+            `<button class="btn btn-primary btn-sm accetta-btn" data-id="${id}" style="flex:1;">Accetta Ordine</button>` : 
+            `<button class="btn btn-ghost btn-sm completa-btn" data-id="${id}" style="flex:1;">Segna come Completato</button>`
+          }
+        </div>
+      `;
+      
+      container.appendChild(card);
+    });
+
+    // Aggiungi eventi ai bottoni appena creati
+    document.querySelectorAll('.accetta-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.target as HTMLButtonElement).dataset.id;
+        await updateDoc(doc(db, "ordini", id!), { stato: "ricevuto" });
+      });
+    });
+
+    document.querySelectorAll('.completa-btn').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.target as HTMLButtonElement).dataset.id;
+        await updateDoc(doc(db, "ordini", id!), { stato: "completato" });
+      });
+    });
+  });
+</script>
