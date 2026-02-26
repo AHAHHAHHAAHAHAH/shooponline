@@ -1,13 +1,10 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import { getAdminDb } from "../../lib/firebase-admin";
+import { db } from "../../lib/firebase-client";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 
-// Caricamento iniziale lato server (SSR)
-const db = getAdminDb();
-const ordiniSnapshot = await db.collection("ordini")
-  .orderBy("creatoAt", "desc")
-  .limit(50)
-  .get();
+// Caricamento iniziale usando il client SDK
+const ordiniSnapshot = await getDocs(query(collection(db, "ordini"), orderBy("creatoAt", "desc"), limit(50)));
 
 const ordiniIniziali = ordiniSnapshot.docs.map(doc => ({
   id: doc.id,

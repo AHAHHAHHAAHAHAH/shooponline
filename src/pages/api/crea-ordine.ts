@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
-import { getAdminDb } from "../../lib/firebase-admin";
+import { db } from "../../lib/firebase-client";
+import { collection, addDoc } from "firebase/firestore";
 import data from "../../data/data.json";
 
 export const POST: APIRoute = async ({ request }) => {
@@ -14,14 +15,12 @@ export const POST: APIRoute = async ({ request }) => {
       return new Response(JSON.stringify({ error: "Il carrello è vuoto." }), { status: 400 });
     }
 
-    // 🚨 CALCOLO DEL TOTALE SICURO LATO SERVER 🚨
     let totaleCalcolato = 0;
     const itemsValidati = [];
 
     for (const item of items) {
       const prodottoReale = data.prodotti.find(p => p.id === item.prodottoId);
       if (!prodottoReale) continue;
-
       totaleCalcolato += prodottoReale.prezzo * item.quantita;
       itemsValidati.push({
         prodottoId: prodottoReale.id,
@@ -34,21 +33,20 @@ export const POST: APIRoute = async ({ request }) => {
 
     if (data.pub.coperto > 0) totaleCalcolato += data.pub.coperto;
 
-    const db = getAdminDb();
-    const ordineRef = await db.collection("ordini").add({
+    const ordineDoc = await addDoc(collection(db, "ordini"), {
       numeroTavolo: Number(numeroTavolo),
       items: itemsValidati,
       totale: totaleCalcolato,
       metodoPagamento: "cassa",
       noteOrdine: noteOrdine || "",
-      stato: "in_attesa", // Il pub dovrà accettarlo
-      pagato: false, // Pagherà alla fine
+      stato: "in_attesa",
+      pagato: false,
       creatoAt: new Date(),
       aggiornatoAt: new Date(),
     });
 
     return new Response(
-      JSON.stringify({ ordineId: ordineRef.id }),
+      JSON.stringify({ ordineId: ordineDoc.id }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err) {

@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getStripe } from "../../lib/stripe";
-import { getAdminDb } from "../../lib/firebase-admin";
+import { db } from "../../lib/firebase-client";
+import { updateDoc, doc } from "firebase/firestore";
 
 export const POST: APIRoute = async ({ request }) => {
   const rawBody = await request.text();
@@ -14,7 +15,6 @@ export const POST: APIRoute = async ({ request }) => {
   const webhookSecret = import.meta.env.STRIPE_WEBHOOK_SECRET; 
 
   try {
-    // Valida che la chiamata provenga davvero da Stripe
     const event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
 
     if (event.type === "payment_intent.succeeded") {
@@ -22,11 +22,9 @@ export const POST: APIRoute = async ({ request }) => {
       const ordineId = paymentIntent.metadata.ordineId;
 
       if (ordineId) {
-        const db = getAdminDb();
-        // Aggiorna Firestore: Ordine pagato!
-        await db.collection("ordini").doc(ordineId).update({
+        await updateDoc(doc(db, "ordini", ordineId), {
           pagato: true,
-          stato: "ricevuto", // Passa da in_attesa a ricevuto
+          stato: "ricevuto",
           aggiornatoAt: new Date()
         });
         console.log(`Ordine ${ordineId} pagato con successo!`);
