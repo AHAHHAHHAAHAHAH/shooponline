@@ -2,8 +2,8 @@
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import data from "../../data/data.json";
 
+// Manteniamo temporaneamente le categorie prese dal JSON per i menu a tendina
 const categorie = data.categorie;
-const prodottiJson = JSON.stringify(data.prodotti);
 const categorieJson = JSON.stringify(categorie);
 ---
 
@@ -12,13 +12,12 @@ const categorieJson = JSON.stringify(categorie);
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div>
         <h1>Prodotti</h1>
-        <p>Aggiungi, modifica e gestisci il menu</p>
+        <p>Aggiungi, modifica e gestisci il menu (Live su Firebase 🔥)</p>
       </div>
       <button class="btn btn-primary" id="btnNuovoProdotto">+ Nuovo prodotto</button>
     </div>
   </div>
 
-  <!-- FILTRI -->
   <div class="filtri-bar">
     <input type="text" id="searchInput" class="input" placeholder="Cerca prodotto..." style="max-width:280px;" />
     <select id="filtroCat" class="input" style="max-width:200px;">
@@ -32,8 +31,7 @@ const categorieJson = JSON.stringify(categorie);
     </select>
   </div>
 
-  <!-- TABELLA PRODOTTI -->
-  <div class="card" style="overflow:hidden;">
+  <div class="card" style="overflow:hidden;" id="prodottiWrapper" data-categorie={categorieJson}>
     <table class="table-admin" id="prodottiTable">
       <thead>
         <tr>
@@ -45,11 +43,12 @@ const categorieJson = JSON.stringify(categorie);
           <th>Azioni</th>
         </tr>
       </thead>
-      <tbody id="prodottiBody"></tbody>
+      <tbody id="prodottiBody">
+        <tr><td colspan="6" style="text-align:center; padding: 20px;">Caricamento prodotti dal database...</td></tr>
+      </tbody>
     </table>
   </div>
 
-  <!-- MODAL PRODOTTO -->
   <div id="prodottoModal" class="modal-overlay" style="display:none;">
     <div class="modal-card">
       <div class="modal-header">
@@ -107,7 +106,7 @@ const categorieJson = JSON.stringify(categorie);
         </div>
         <div class="modal-footer">
           <button type="button" id="cancelModal" class="btn btn-ghost">Annulla</button>
-          <button type="submit" class="btn btn-primary" id="saveProdotto">Salva prodotto</button>
+          <button type="submit" class="btn btn-primary" id="saveProdottoBtn">Salva prodotto</button>
         </div>
       </form>
     </div>
@@ -140,21 +139,56 @@ const categorieJson = JSON.stringify(categorie);
   .azioni-cell { display: flex; gap: 8px; }
 </style>
 
-<script define:vars={{ prodottiJson, categorieJson }}>
+<script>
   import { getFirebaseClient } from "../../lib/firebase-client";
   import { onAuthStateChanged } from "firebase/auth";
+  import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
-  const { auth } = getFirebaseClient();
-  onAuthStateChanged(auth, (user) => { if (!user) window.location.href = "/admin"; });
-
-  let prodotti = JSON.parse(prodottiJson);
+  const { auth, db } = getFirebaseClient();
+  
+  // Leggiamo le categorie dal div wrapper in modo pulito per Astro
+  const wrapper = document.getElementById("prodottiWrapper");
+  const categorieJson = wrapper?.dataset.categorie || "[]";
   const categorie = JSON.parse(categorieJson);
-  let filteredProdotti = [...prodotti];
-
   const catMap = Object.fromEntries(categorie.map((c: any) => [c.id, c]));
 
+  let prodotti: any[] = [];
+  let filteredProdotti: any[] = [];
+
+  // Controllo Autenticazione & Caricamento Prodotti
+  onAuthStateChanged(auth, async (user) => { 
+    if (!user) {
+      window.location.href = "/admin"; 
+    } else {
+      await caricaProdottiDaFirebase();
+    }
+  });
+
+  async function caricaProdottiDaFirebase() {
+    try {
+      const snapshot = await getDocs(collection(db, "prodotti"));
+      prodotti = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Ordina in ordine alfabetico
+      prodotti.sort((a, b) => a.nome.localeCompare(b.nome));
+      
+      applyFilters();
+    } catch (error) {
+      console.error("Errore nel caricamento:", error);
+      const tbody = document.getElementById("prodottiBody");
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Errore di connessione a Firebase!</td></tr>`;
+    }
+  }
+
   function renderTable() {
-    const tbody = document.getElementById("prodottiBody")!;
+    const tbody = document.getElementById("prodottiBody");
+    if (!tbody) return;
+    
+    if (filteredProdotti.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Nessun prodotto trovato. Aggiungine uno!</td></tr>`;
+      return;
+    }
+
     tbody.innerHTML = filteredProdotti.map(p => `
       <tr>
         <td class="prodotto-nome-cell">
@@ -162,7 +196,7 @@ const categorieJson = JSON.stringify(categorie);
           <span>${p.nome}</span>
         </td>
         <td>${catMap[p.categoriaId]?.emoji || ""} ${catMap[p.categoriaId]?.nome || p.categoriaId}</td>
-        <td><strong>€ ${p.prezzo.toFixed(2).replace('.', ',')}</strong></td>
+        <td><strong>€ ${Number(p.prezzo).toFixed(2).replace('.', ',')}</strong></td>
         <td>
           <label class="toggle-switch" title="${p.disponibile ? 'Disponibile' : 'Non disponibile'}">
             <input type="checkbox" ${p.disponibile ? 'checked' : ''} onchange="toggleDisponibile('${p.id}', this.checked)" />
@@ -176,7 +210,7 @@ const categorieJson = JSON.stringify(categorie);
           </label>
         </td>
         <td class="azioni-cell">
-          <button class="btn btn-ghost btn-sm" onclick="editProdotto('${p.id}')">✏️ Modifica</button>
+          <button class="btn btn-ghost btn-sm" onclick="editProdotto('${p.id}')">✏️</button>
           <button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);" onclick="deleteProdotto('${p.id}')">🗑</button>
         </td>
       </tr>
@@ -184,11 +218,12 @@ const categorieJson = JSON.stringify(categorie);
   }
 
   function applyFilters() {
-    const search = (document.getElementById("searchInput") as HTMLInputElement).value.toLowerCase();
-    const cat = (document.getElementById("filtroCat") as HTMLSelectElement).value;
-    const disp = (document.getElementById("filtroDisp") as HTMLSelectElement).value;
+    const search = (document.getElementById("searchInput") as HTMLInputElement)?.value.toLowerCase() || "";
+    const cat = (document.getElementById("filtroCat") as HTMLSelectElement)?.value || "";
+    const disp = (document.getElementById("filtroDisp") as HTMLSelectElement)?.value || "";
+    
     filteredProdotti = prodotti.filter((p: any) => {
-      if (search && !p.nome.toLowerCase().includes(search) && !p.descrizione.toLowerCase().includes(search)) return false;
+      if (search && !p.nome.toLowerCase().includes(search) && !(p.descrizione || "").toLowerCase().includes(search)) return false;
       if (cat && p.categoriaId !== cat) return false;
       if (disp === "1" && !p.disponibile) return false;
       if (disp === "0" && p.disponibile) return false;
@@ -202,7 +237,7 @@ const categorieJson = JSON.stringify(categorie);
     document.getElementById(id)?.addEventListener("change", applyFilters);
   });
 
-  // Modal
+  // GESTIONE MODAL E SALVATAGGIO
   const modal = document.getElementById("prodottoModal")!;
   const form = document.getElementById("prodottoForm") as HTMLFormElement;
 
@@ -228,11 +263,16 @@ const categorieJson = JSON.stringify(categorie);
   document.getElementById("closeModal")?.addEventListener("click", () => modal.style.display = "none");
   document.getElementById("cancelModal")?.addEventListener("click", () => modal.style.display = "none");
 
-  form.addEventListener("submit", async (e) => {
+  form?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const id = (document.getElementById("prodottoId") as HTMLInputElement).value;
+    const btn = document.getElementById("saveProdottoBtn") as HTMLButtonElement;
+    btn.disabled = true;
+    btn.textContent = "Salvataggio...";
+
+    const inputId = (document.getElementById("prodottoId") as HTMLInputElement).value;
+    const id = inputId || `prod_${Date.now()}`; 
+    
     const nuovoProdotto = {
-      id: id || `prod-${Date.now()}`,
       nome: (document.getElementById("fNome") as HTMLInputElement).value,
       categoriaId: (document.getElementById("fCategoria") as HTMLSelectElement).value,
       prezzo: parseFloat((document.getElementById("fPrezzo") as HTMLInputElement).value),
@@ -246,21 +286,22 @@ const categorieJson = JSON.stringify(categorie);
       alcolico: (document.getElementById("fAlcolico") as HTMLInputElement).checked,
     };
 
-    // Salva via API
-    const res = await fetch("/api/admin/salva-prodotto", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(nuovoProdotto),
-    });
+    try {
+      await setDoc(doc(db, "prodotti", id), nuovoProdotto);
 
-    if (res.ok) {
+      const prodottoCompleto = { id, ...nuovoProdotto };
       const idx = prodotti.findIndex((p: any) => p.id === id);
-      if (idx >= 0) prodotti[idx] = nuovoProdotto;
-      else prodotti.push(nuovoProdotto);
+      if (idx >= 0) prodotti[idx] = prodottoCompleto;
+      else prodotti.push(prodottoCompleto);
+      
       applyFilters();
       modal.style.display = "none";
-    } else {
-      alert("Errore nel salvataggio. Riprova.");
+    } catch (err) {
+      console.error(err);
+      alert("Errore salvataggio Firebase. Controlla le regole di sicurezza.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Salva prodotto";
     }
   });
 
@@ -273,11 +314,7 @@ const categorieJson = JSON.stringify(categorie);
     const idx = prodotti.findIndex((p: any) => p.id === id);
     if (idx >= 0) {
       prodotti[idx].disponibile = val;
-      await fetch("/api/admin/salva-prodotto", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(prodotti[idx]),
-      });
+      await updateDoc(doc(db, "prodotti", id), { disponibile: val });
     }
   };
 
@@ -285,22 +322,19 @@ const categorieJson = JSON.stringify(categorie);
     const idx = prodotti.findIndex((p: any) => p.id === id);
     if (idx >= 0) {
       prodotti[idx].inEvidenza = val;
-      await fetch("/api/admin/salva-prodotto", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(prodotti[idx]),
-      });
+      await updateDoc(doc(db, "prodotti", id), { inEvidenza: val });
     }
   };
 
   (window as any).deleteProdotto = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo prodotto?")) return;
-    const res = await fetch(`/api/admin/elimina-prodotto?id=${id}`, { method: "DELETE" });
-    if (res.ok) {
+    if (!confirm("Sei sicuro di voler eliminare definitivamente questo prodotto?")) return;
+    try {
+      await deleteDoc(doc(db, "prodotti", id));
       prodotti = prodotti.filter((p: any) => p.id !== id);
       applyFilters();
+    } catch (err) {
+      console.error(err);
+      alert("Errore durante l'eliminazione.");
     }
   };
-
-  renderTable();
 </script>

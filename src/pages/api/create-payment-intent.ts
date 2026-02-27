@@ -1,15 +1,14 @@
 import type { APIRoute } from "astro";
 import Stripe from "stripe";
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore, collection, addDoc, updateDoc, doc } from "firebase/firestore";
-import data from "../../data/data.json";
+import { getFirestore, collection, addDoc, updateDoc, doc, getDocs } from "firebase/firestore";
+import data from "../../data/data.json"; // Teniamo il JSON solo per leggere pub.coperto
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    // Recuperiamo tutte le chiavi dall'ambiente Cloudflare
     const env = (locals as any).runtime?.env || import.meta.env;
 
-    // 1. INIZIALIZZAZIONE SICURA DI FIREBASE SUL SERVER
+    // 1. INIZIALIZZAZIONE FIREBASE SUL SERVER
     const firebaseConfig = {
       apiKey: env.PUBLIC_FIREBASE_API_KEY,
       authDomain: env.PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -19,43 +18,44 @@ export const POST: APIRoute = async ({ request, locals }) => {
       appId: env.PUBLIC_FIREBASE_APP_ID
     };
 
-    if (!firebaseConfig.apiKey) {
-      throw new Error("Mancano le chiavi PUBLIC_FIREBASE_... nelle variabili di Cloudflare!");
-    }
-
-    // Creiamo l'app Firebase o usiamo quella esistente se è già in memoria
+    if (!firebaseConfig.apiKey) throw new Error("Mancano le chiavi FIREBASE!");
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const db = getFirestore(app);
 
-    // 2. INIZIALIZZAZIONE SICURA DI STRIPE
+    // 2. INIZIALIZZAZIONE STRIPE
     const stripeSecret = env.STRIPE_SECRET_KEY;
-    if (!stripeSecret) {
-      throw new Error("Manca la STRIPE_SECRET_KEY nelle variabili di Cloudflare!");
-    }
+    if (!stripeSecret) throw new Error("Manca STRIPE_SECRET_KEY!");
     const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" as any });
 
-    // 3. LOGICA DELL'ORDINE
     const body = await request.json();
     const { ordineData } = body;
     const { numeroTavolo, items, noteOrdine } = ordineData;
 
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (!items || items.length === 0) {
       return new Response(JSON.stringify({ error: "Carrello vuoto" }), { status: 400 });
     }
+
+    // 3. SCARICHIAMO I PRODOTTI LIVE DA FIREBASE PER VERIFICARE I PREZZI
+    const prodottiSnapshot = await getDocs(collection(db, "prodotti"));
+    const prodottiDb = prodottiSnapshot.docs.map(d => ({ id: d.id, ...d.data() as any }));
 
     let totaleCalcolato = 0;
     const itemsValidati = [];
 
+    // Validazione antimanomissione
     for (const item of items) {
-      const prodottoReale = data.prodotti.find(p => p.id === item.prodottoId);
-      if (!prodottoReale) continue;
-      totaleCalcolato += prodottoReale.prezzo * item.quantita;
+      const prodottoReale = prodottiDb.find(p => p.id === item.prodottoId);
+      if (!prodottoReale) continue; // Ignora se il prodotto non esiste più
+      
+      const prezzo = Number(prodottoReale.prezzo);
+      totaleCalcolato += prezzo * item.quantita;
+      
       itemsValidati.push({
         prodottoId: prodottoReale.id,
         nomeProdotto: prodottoReale.nome,
-        prezzoUnitario: prodottoReale.prezzo,
+        prezzoUnitario: prezzo,
         quantita: item.quantita,
-        totaleRiga: prodottoReale.prezzo * item.quantita
+        totaleRiga: prezzo * item.quantita
       });
     }
 
@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return new Response(JSON.stringify({ error: "Totale non valido" }), { status: 400 });
     }
 
-    // Salviamo l'ordine su Firestore
+    // 4. SALVATAGGIO ORDINE E PAYMENT INTENT
     const ordineDoc = await addDoc(collection(db, "ordini"), {
       numeroTavolo: Number(numeroTavolo),
       items: itemsValidati,
@@ -79,16 +79,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       aggiornatoAt: new Date(),
     });
 
-    // Creiamo la transazione con Stripe
     const importoCentesimi = Math.round(totaleCalcolato * 100);
     const paymentIntent = await stripe.paymentIntents.create({
       amount: importoCentesimi,
       currency: "eur",
       automatic_payment_methods: { enabled: true },
-      metadata: {
-        ordineId: ordineDoc.id,
-        tavolo: String(numeroTavolo),
-      },
+      metadata: { ordineId: ordineDoc.id, tavolo: String(numeroTavolo) },
     });
 
     await updateDoc(doc(db, "ordini", ordineDoc.id), { stripePaymentIntentId: paymentIntent.id });
@@ -98,10 +94,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   } catch (err: any) {
-    console.error("Errore Dettagliato:", err.message);
-    return new Response(
-      JSON.stringify({ error: "Errore server", dettaglio: err.message }), 
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    console.error("Errore:", err.message);
+    return new Response(JSON.stringify({ error: "Errore server", dettaglio: err.message }), { status: 500 });
   }
 };
