@@ -2,7 +2,6 @@
 import AdminLayout from "../../layouts/AdminLayout.astro";
 import data from "../../data/data.json";
 
-// Manteniamo temporaneamente le categorie prese dal JSON per i menu a tendina
 const categorie = data.categorie;
 const categorieJson = JSON.stringify(categorie);
 ---
@@ -12,7 +11,7 @@ const categorieJson = JSON.stringify(categorie);
     <div style="display:flex;align-items:center;justify-content:space-between;">
       <div>
         <h1>Prodotti</h1>
-        <p>Aggiungi, modifica e gestisci il menu (Live su Firebase 🔥)</p>
+        <p>Gestisci il menu (Live su Firebase 🔥)</p>
       </div>
       <button class="btn btn-primary" id="btnNuovoProdotto">+ Nuovo prodotto</button>
     </div>
@@ -23,11 +22,6 @@ const categorieJson = JSON.stringify(categorie);
     <select id="filtroCat" class="input" style="max-width:200px;">
       <option value="">Tutte le categorie</option>
       {categorie.map(c => <option value={c.id}>{c.emoji} {c.nome}</option>)}
-    </select>
-    <select id="filtroDisp" class="input" style="max-width:180px;">
-      <option value="">Tutti</option>
-      <option value="1">Disponibili</option>
-      <option value="0">Non disponibili</option>
     </select>
   </div>
 
@@ -73,8 +67,8 @@ const categorieJson = JSON.stringify(categorie);
             <input type="number" id="fPrezzo" class="input" step="0.50" min="0" required />
           </div>
           <div class="form-group">
-            <label class="label">Gradazione alcolica</label>
-            <input type="text" id="fGradazione" class="input" placeholder="es. 12° (vuoto se analcolico)" />
+            <label class="label">Gradazione</label>
+            <input type="text" id="fGradazione" class="input" placeholder="es. 12°" />
           </div>
           <div class="form-group" style="grid-column:1/-1;">
             <label class="label">Descrizione *</label>
@@ -84,24 +78,10 @@ const categorieJson = JSON.stringify(categorie);
             <label class="label">URL Immagine</label>
             <input type="url" id="fImmagine" class="input" placeholder="/images/prodotti/nome.jpg" />
           </div>
-          <div class="form-group" style="grid-column:1/-1;">
-            <label class="label">Allergeni (separati da virgola)</label>
-            <input type="text" id="fAllergeni" class="input" placeholder="glutine, latte, uova" />
-          </div>
-          <div class="form-group" style="grid-column:1/-1;">
-            <label class="label">Tag (separati da virgola)</label>
-            <input type="text" id="fTag" class="input" placeholder="classico, fresco, signature" />
-          </div>
           <div class="form-group checkboxes" style="grid-column:1/-1;">
-            <label class="checkbox-label">
-              <input type="checkbox" id="fDisponibile" checked /> Disponibile
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="fEvidenza" /> In evidenza (homepage)
-            </label>
-            <label class="checkbox-label">
-              <input type="checkbox" id="fAlcolico" /> Alcolico
-            </label>
+            <label class="checkbox-label"><input type="checkbox" id="fDisponibile" checked /> Disponibile</label>
+            <label class="checkbox-label"><input type="checkbox" id="fEvidenza" /> In evidenza (homepage)</label>
+            <label class="checkbox-label"><input type="checkbox" id="fAlcolico" /> Alcolico</label>
           </div>
         </div>
         <div class="modal-footer">
@@ -123,20 +103,15 @@ const categorieJson = JSON.stringify(categorie);
   .toggle-slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.3s; }
   .toggle-switch input:checked + .toggle-slider { background: var(--success); }
   .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
-
-  /* MODAL */
   .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
   .modal-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto; }
   .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 24px 24px 0; }
-  .modal-header h3 { font-size: 1.3rem; }
-  .modal-close { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 4px; }
   .modal-body { padding: 24px; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
   .form-group { display: flex; flex-direction: column; gap: 8px; }
   .checkboxes { display: flex; gap: 20px; align-items: center; }
   .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; }
   .modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid var(--border); }
-  .azioni-cell { display: flex; gap: 8px; }
 </style>
 
 <script>
@@ -145,8 +120,6 @@ const categorieJson = JSON.stringify(categorie);
   import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
   const { auth, db } = getFirebaseClient();
-  
-  // Leggiamo le categorie dal div wrapper in modo pulito per Astro
   const wrapper = document.getElementById("prodottiWrapper");
   const categorieJson = wrapper?.dataset.categorie || "[]";
   const categorie = JSON.parse(categorieJson);
@@ -155,50 +128,40 @@ const categorieJson = JSON.stringify(categorie);
   let prodotti: any[] = [];
   let filteredProdotti: any[] = [];
 
-  // Controllo Autenticazione & Caricamento Prodotti
   onAuthStateChanged(auth, async (user) => { 
-    if (!user) {
-      window.location.href = "/admin"; 
-    } else {
-      await caricaProdottiDaFirebase();
-    }
+    if (!user) window.location.href = "/admin"; 
+    else await caricaProdottiDaFirebase();
   });
 
   async function caricaProdottiDaFirebase() {
     try {
       const snapshot = await getDocs(collection(db, "prodotti"));
       prodotti = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Ordina in ordine alfabetico
       prodotti.sort((a, b) => a.nome.localeCompare(b.nome));
-      
       applyFilters();
     } catch (error) {
-      console.error("Errore nel caricamento:", error);
       const tbody = document.getElementById("prodottiBody");
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Errore di connessione a Firebase!</td></tr>`;
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Errore di connessione!</td></tr>`;
     }
   }
 
   function renderTable() {
     const tbody = document.getElementById("prodottiBody");
     if (!tbody) return;
-    
     if (filteredProdotti.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Nessun prodotto trovato. Aggiungine uno!</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Nessun prodotto trovato.</td></tr>`;
       return;
     }
-
     tbody.innerHTML = filteredProdotti.map(p => `
       <tr>
         <td class="prodotto-nome-cell">
-          <img class="prodotto-thumb" src="${p.immagine || '/images/placeholder.svg'}" alt="${p.nome}" onerror="this.src='/images/placeholder.svg'" />
+          <img class="prodotto-thumb" src="${p.immagine || '/images/placeholder.svg'}" onerror="this.src='/images/placeholder.svg'" />
           <span>${p.nome}</span>
         </td>
         <td>${catMap[p.categoriaId]?.emoji || ""} ${catMap[p.categoriaId]?.nome || p.categoriaId}</td>
         <td><strong>€ ${Number(p.prezzo).toFixed(2).replace('.', ',')}</strong></td>
         <td>
-          <label class="toggle-switch" title="${p.disponibile ? 'Disponibile' : 'Non disponibile'}">
+          <label class="toggle-switch">
             <input type="checkbox" ${p.disponibile ? 'checked' : ''} onchange="toggleDisponibile('${p.id}', this.checked)" />
             <span class="toggle-slider"></span>
           </label>
@@ -220,38 +183,28 @@ const categorieJson = JSON.stringify(categorie);
   function applyFilters() {
     const search = (document.getElementById("searchInput") as HTMLInputElement)?.value.toLowerCase() || "";
     const cat = (document.getElementById("filtroCat") as HTMLSelectElement)?.value || "";
-    const disp = (document.getElementById("filtroDisp") as HTMLSelectElement)?.value || "";
-    
     filteredProdotti = prodotti.filter((p: any) => {
-      if (search && !p.nome.toLowerCase().includes(search) && !(p.descrizione || "").toLowerCase().includes(search)) return false;
+      if (search && !p.nome.toLowerCase().includes(search)) return false;
       if (cat && p.categoriaId !== cat) return false;
-      if (disp === "1" && !p.disponibile) return false;
-      if (disp === "0" && p.disponibile) return false;
       return true;
     });
     renderTable();
   }
 
-  ["searchInput", "filtroCat", "filtroDisp"].forEach(id => {
-    document.getElementById(id)?.addEventListener("input", applyFilters);
-    document.getElementById(id)?.addEventListener("change", applyFilters);
-  });
+  document.getElementById("searchInput")?.addEventListener("input", applyFilters);
+  document.getElementById("filtroCat")?.addEventListener("change", applyFilters);
 
-  // GESTIONE MODAL E SALVATAGGIO
   const modal = document.getElementById("prodottoModal")!;
   const form = document.getElementById("prodottoForm") as HTMLFormElement;
 
   function openModal(prodotto?: any) {
-    const title = document.getElementById("modalTitle")!;
-    title.textContent = prodotto ? "Modifica prodotto" : "Nuovo prodotto";
+    (document.getElementById("modalTitle") as HTMLElement).textContent = prodotto ? "Modifica prodotto" : "Nuovo prodotto";
     (document.getElementById("prodottoId") as HTMLInputElement).value = prodotto?.id || "";
     (document.getElementById("fNome") as HTMLInputElement).value = prodotto?.nome || "";
     (document.getElementById("fCategoria") as HTMLSelectElement).value = prodotto?.categoriaId || "";
     (document.getElementById("fPrezzo") as HTMLInputElement).value = prodotto?.prezzo || "";
     (document.getElementById("fDescrizione") as HTMLTextAreaElement).value = prodotto?.descrizione || "";
     (document.getElementById("fImmagine") as HTMLInputElement).value = prodotto?.immagine || "";
-    (document.getElementById("fAllergeni") as HTMLInputElement).value = (prodotto?.allergeni || []).join(", ");
-    (document.getElementById("fTag") as HTMLInputElement).value = (prodotto?.tag || []).join(", ");
     (document.getElementById("fGradazione") as HTMLInputElement).value = prodotto?.gradazione || "";
     (document.getElementById("fDisponibile") as HTMLInputElement).checked = prodotto?.disponibile !== false;
     (document.getElementById("fEvidenza") as HTMLInputElement).checked = prodotto?.inEvidenza || false;
@@ -266,20 +219,15 @@ const categorieJson = JSON.stringify(categorie);
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = document.getElementById("saveProdottoBtn") as HTMLButtonElement;
-    btn.disabled = true;
-    btn.textContent = "Salvataggio...";
+    btn.disabled = true; btn.textContent = "Salvataggio...";
 
-    const inputId = (document.getElementById("prodottoId") as HTMLInputElement).value;
-    const id = inputId || `prod_${Date.now()}`; 
-    
+    const id = (document.getElementById("prodottoId") as HTMLInputElement).value || `prod_${Date.now()}`; 
     const nuovoProdotto = {
       nome: (document.getElementById("fNome") as HTMLInputElement).value,
       categoriaId: (document.getElementById("fCategoria") as HTMLSelectElement).value,
       prezzo: parseFloat((document.getElementById("fPrezzo") as HTMLInputElement).value),
       descrizione: (document.getElementById("fDescrizione") as HTMLTextAreaElement).value,
       immagine: (document.getElementById("fImmagine") as HTMLInputElement).value || "/images/placeholder.svg",
-      allergeni: (document.getElementById("fAllergeni") as HTMLInputElement).value.split(",").map(s => s.trim()).filter(Boolean),
-      tag: (document.getElementById("fTag") as HTMLInputElement).value.split(",").map(s => s.trim()).filter(Boolean),
       gradazione: (document.getElementById("fGradazione") as HTMLInputElement).value || null,
       disponibile: (document.getElementById("fDisponibile") as HTMLInputElement).checked,
       inEvidenza: (document.getElementById("fEvidenza") as HTMLInputElement).checked,
@@ -288,53 +236,31 @@ const categorieJson = JSON.stringify(categorie);
 
     try {
       await setDoc(doc(db, "prodotti", id), nuovoProdotto);
-
       const prodottoCompleto = { id, ...nuovoProdotto };
       const idx = prodotti.findIndex((p: any) => p.id === id);
-      if (idx >= 0) prodotti[idx] = prodottoCompleto;
-      else prodotti.push(prodottoCompleto);
-      
+      if (idx >= 0) prodotti[idx] = prodottoCompleto; else prodotti.push(prodottoCompleto);
       applyFilters();
       modal.style.display = "none";
     } catch (err) {
-      console.error(err);
-      alert("Errore salvataggio Firebase. Controlla le regole di sicurezza.");
+      alert("Errore salvataggio Firebase.");
     } finally {
-      btn.disabled = false;
-      btn.textContent = "Salva prodotto";
+      btn.disabled = false; btn.textContent = "Salva prodotto";
     }
   });
 
-  (window as any).editProdotto = (id: string) => {
-    const p = prodotti.find((p: any) => p.id === id);
-    if (p) openModal(p);
-  };
-
+  (window as any).editProdotto = (id: string) => openModal(prodotti.find((p: any) => p.id === id));
   (window as any).toggleDisponibile = async (id: string, val: boolean) => {
     const idx = prodotti.findIndex((p: any) => p.id === id);
-    if (idx >= 0) {
-      prodotti[idx].disponibile = val;
-      await updateDoc(doc(db, "prodotti", id), { disponibile: val });
-    }
+    if (idx >= 0) { prodotti[idx].disponibile = val; await updateDoc(doc(db, "prodotti", id), { disponibile: val }); }
   };
-
   (window as any).toggleEvidenza = async (id: string, val: boolean) => {
     const idx = prodotti.findIndex((p: any) => p.id === id);
-    if (idx >= 0) {
-      prodotti[idx].inEvidenza = val;
-      await updateDoc(doc(db, "prodotti", id), { inEvidenza: val });
-    }
+    if (idx >= 0) { prodotti[idx].inEvidenza = val; await updateDoc(doc(db, "prodotti", id), { inEvidenza: val }); }
   };
-
   (window as any).deleteProdotto = async (id: string) => {
-    if (!confirm("Sei sicuro di voler eliminare definitivamente questo prodotto?")) return;
-    try {
-      await deleteDoc(doc(db, "prodotti", id));
-      prodotti = prodotti.filter((p: any) => p.id !== id);
-      applyFilters();
-    } catch (err) {
-      console.error(err);
-      alert("Errore durante l'eliminazione.");
-    }
+    if (!confirm("Sei sicuro?")) return;
+    await deleteDoc(doc(db, "prodotti", id));
+    prodotti = prodotti.filter((p: any) => p.id !== id);
+    applyFilters();
   };
 </script>
