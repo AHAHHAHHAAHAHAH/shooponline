@@ -39,8 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const stripe = new Stripe(stripeSecret, { apiVersion: "2023-10-16" as any });
 
     // 4. VERIFICA E GESTIONE DEL WEBHOOK
-    const event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
-
+    const event = await stripe.webhooks.constructEventAsync(rawBody, signature, webhookSecret);
     if (event.type === "payment_intent.succeeded") {
       const paymentIntent = event.data.object as any;
       const ordineId = paymentIntent.metadata.ordineId;
