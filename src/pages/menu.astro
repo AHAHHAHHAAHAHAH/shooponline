@@ -1,8 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import data from "../data/data.json";
-
-// NON leggiamo più le categorie dal file JSON!
 ---
 
 <Layout title={`Menu — ${data.pub.nome}`} description={`Esplora il menu di ${data.pub.nome}`}>
@@ -21,14 +19,13 @@ import data from "../data/data.json";
     <main class="menu-content" id="menuContent">
       <div style="text-align:center; padding: 40px; color: var(--accent);">
         <span class="spinner" style="border-color: var(--accent) transparent var(--accent) transparent;"></span>
-        <p>Caricamento menu in corso...</p>
+        <p>Caricamento menu in diretta...</p>
       </div>
     </main>
   </div>
 </Layout>
 
 <style>
-  /* [Gli stili rimangono IDENTICI ai tuoi originali perfetti] */
   .menu-hero { padding: 80px 24px 40px; text-align: center; border-bottom: 1px solid var(--border); }
   .menu-hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); margin-bottom: 12px; }
   .menu-layout { display: flex; gap: 48px; padding: 48px 24px 80px; align-items: flex-start; }
@@ -66,52 +63,38 @@ import data from "../data/data.json";
 
 <script>
   import { getFirebaseClient } from "../lib/firebase-client";
-  import { collection, getDocs } from "firebase/firestore";
+  import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 
-  const CACHE_KEY = "shoop_menu_data";
-  const CACHE_TIME_KEY = "shoop_menu_time";
-  const CACHE_TTL = 15 * 60 * 1000; // 15 Minuti in millisecondi
+  const contentEl = document.getElementById("menuContent");
+  const navEl = document.getElementById("categoriaNav");
 
-  async function caricaMenu() {
-    const navEl = document.getElementById("categoriaNav");
-    const contentEl = document.getElementById("menuContent");
-    if (!contentEl || !navEl) return;
-
+  if (contentEl && navEl) {
+    const { db } = getFirebaseClient();
     let categorie: any[] = [];
     let prodotti: any[] = [];
-    
-    const now = Date.now();
-    const cachedData = sessionStorage.getItem(CACHE_KEY);
-    const cachedTime = sessionStorage.getItem(CACHE_TIME_KEY);
+    let catLoaded = false;
+    let prodLoaded = false;
 
-    try {
-      // LOGICA DI CACHING AVANZATA (La "A")
-      if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_TTL)) {
-        // Usa la memoria del telefono (Zero chiamate a Firebase!)
-        const parsed = JSON.parse(cachedData);
-        categorie = parsed.categorie;
-        prodotti = parsed.prodotti;
-      } else {
-        // Dati vecchi o inesistenti: Scarica da Firebase
-        const { db } = getFirebaseClient();
-        const [catSnap, prodSnap] = await Promise.all([
-          getDocs(collection(db, "categorie")),
-          getDocs(collection(db, "prodotti"))
-        ]);
-        
-        categorie = catSnap.docs.map(d => ({ id: d.id, ...d.data() as any }))
-                    .sort((a, b) => a.ordinamento - b.ordinamento);
-        prodotti = prodSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+    // Ascolto in tempo reale delle categorie
+    onSnapshot(query(collection(db, "categorie"), orderBy("ordinamento", "asc")), (snap) => {
+      categorie = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      catLoaded = true;
+      if (prodLoaded) renderMenu();
+    });
 
-        // Salva nel "taccuino" del browser
-        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ categorie, prodotti }));
-        sessionStorage.setItem(CACHE_TIME_KEY, now.toString());
-      }
+    // Ascolto in tempo reale dei prodotti
+    onSnapshot(collection(db, "prodotti"), (snap) => {
+      prodotti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      prodLoaded = true;
+      if (catLoaded) renderMenu();
+    });
 
-      const prodottiAttivi = prodotti.filter(p => p.disponibile !== false);
+    function renderMenu() {
+      const prodottiAttivi = prodotti.filter((p: any) => p.disponibile !== false);
 
       if (categorie.length === 0 || prodottiAttivi.length === 0) {
-        contentEl.innerHTML = `<div style="text-align:center; padding:40px;">Il menu è in aggiornamento. Torna a breve!</div>`;
+        contentEl!.innerHTML = `<div style="text-align:center; padding:40px; color: var(--muted);">Il menu è vuoto o in aggiornamento.</div>`;
+        navEl!.innerHTML = "";
         return;
       }
 
@@ -131,7 +114,7 @@ import data from "../data/data.json";
               ${prodottiCat.map((p: any) => `
                 <div class="prodotto-card">
                   <div class="prodotto-img-wrap">
-                    <img class="prodotto-img" src="${p.immagine || '/images/placeholder.svg'}" alt="${p.nome}" loading="lazy" />
+                    <img class="prodotto-img" src="${p.immagine || '/images/placeholder.svg'}" alt="${p.nome}" loading="lazy" onerror="this.src='/images/placeholder.svg'" />
                   </div>
                   <div class="prodotto-info">
                     <div class="prodotto-header">
@@ -154,12 +137,8 @@ import data from "../data/data.json";
         `;
       });
 
-      navEl.innerHTML = htmlNav;
-      contentEl.innerHTML = htmlContent;
-
-    } catch (err) {
-      console.error(err);
-      contentEl.innerHTML = `<div style="text-align:center; padding:40px; color:red;">Errore caricamento menu. Aggiorna la pagina.</div>`;
+      navEl!.innerHTML = htmlNav;
+      contentEl!.innerHTML = htmlContent;
     }
   }
 
@@ -172,6 +151,4 @@ import data from "../data/data.json";
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
     alert(`✅ ${prodotto.nome} aggiunto al carrello!`);
   };
-
-  caricaMenu();
 </script>

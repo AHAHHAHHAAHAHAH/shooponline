@@ -1,94 +1,52 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-// Nessuna categoria hardcodata qui, tutto dinamico!
 ---
 
 <AdminLayout title="Gestione Prodotti" activeNav="prodotti">
   <div class="page-header">
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <h1>Prodotti</h1>
-        <p>Gestisci il menu (Live su Firebase 🔥)</p>
-      </div>
+      <div><h1>Prodotti</h1><p>Gestisci il menu (Live su Firebase 🔥)</p></div>
       <button class="btn btn-primary" id="btnNuovoProdotto">+ Nuovo prodotto</button>
     </div>
   </div>
 
   <div class="filtri-bar">
     <input type="text" id="searchInput" class="input" placeholder="Cerca prodotto..." style="max-width:280px;" />
-    <select id="filtroCat" class="input" style="max-width:200px;">
-      <option value="">Tutte le categorie</option>
-    </select>
+    <select id="filtroCat" class="input" style="max-width:200px;"><option value="">Tutte</option></select>
   </div>
 
   <div class="card" style="overflow:hidden;">
-    <table class="table-admin" id="prodottiTable">
-      <thead>
-        <tr>
-          <th>Prodotto</th>
-          <th>Categoria</th>
-          <th>Prezzo</th>
-          <th>Stato</th>
-          <th>In evidenza</th>
-          <th>Azioni</th>
-        </tr>
-      </thead>
-      <tbody id="prodottiBody">
-        <tr><td colspan="6" style="text-align:center; padding: 20px;">Caricamento dati dal database...</td></tr>
-      </tbody>
+    <table class="table-admin">
+      <thead><tr><th>Prodotto</th><th>Categoria</th><th>Prezzo</th><th>Stato</th><th>In evidenza</th><th>Azioni</th></tr></thead>
+      <tbody id="prodottiBody"><tr><td colspan="6" style="text-align:center; padding: 20px;">Caricamento...</td></tr></tbody>
     </table>
   </div>
 
   <div id="prodottoModal" class="modal-overlay" style="display:none;">
     <div class="modal-card">
-      <div class="modal-header">
-        <h3 id="modalTitle">Nuovo prodotto</h3>
-        <button id="closeModal" class="modal-close">✕</button>
-      </div>
+      <div class="modal-header"><h3 id="modalTitle">Nuovo prodotto</h3><button id="closeModal" class="modal-close">✕</button></div>
       <form id="prodottoForm" class="modal-body">
         <input type="hidden" id="prodottoId" />
         <div class="form-grid">
-          <div class="form-group">
-            <label class="label">Nome prodotto *</label>
-            <input type="text" id="fNome" class="input" required />
-          </div>
-          <div class="form-group">
-            <label class="label">Categoria *</label>
-            <select id="fCategoria" class="input" required></select>
-          </div>
-          <div class="form-group">
-            <label class="label">Prezzo (€) *</label>
-            <input type="number" id="fPrezzo" class="input" step="0.50" min="0" required />
-          </div>
-          <div class="form-group">
-            <label class="label">Gradazione</label>
-            <input type="text" id="fGradazione" class="input" placeholder="es. 12°" />
-          </div>
-          <div class="form-group" style="grid-column:1/-1;">
-            <label class="label">Descrizione *</label>
-            <textarea id="fDescrizione" class="input" rows="3" required></textarea>
-          </div>
-          <div class="form-group" style="grid-column:1/-1;">
-            <label class="label">URL Immagine</label>
-            <input type="url" id="fImmagine" class="input" placeholder="/images/prodotti/nome.jpg" />
-          </div>
+          <div class="form-group"><label class="label">Nome *</label><input type="text" id="fNome" class="input" required /></div>
+          <div class="form-group"><label class="label">Categoria *</label><select id="fCategoria" class="input" required></select></div>
+          <div class="form-group"><label class="label">Prezzo (€) *</label><input type="number" id="fPrezzo" class="input" step="0.50" min="0" required /></div>
+          <div class="form-group"><label class="label">Gradazione</label><input type="text" id="fGradazione" class="input" /></div>
+          <div class="form-group" style="grid-column:1/-1;"><label class="label">Descrizione *</label><textarea id="fDescrizione" class="input" rows="3" required></textarea></div>
+          <div class="form-group" style="grid-column:1/-1;"><label class="label">URL Immagine</label><input type="url" id="fImmagine" class="input" /></div>
           <div class="form-group checkboxes" style="grid-column:1/-1;">
             <label class="checkbox-label"><input type="checkbox" id="fDisponibile" checked /> Disponibile</label>
-            <label class="checkbox-label"><input type="checkbox" id="fEvidenza" /> In evidenza (homepage)</label>
+            <label class="checkbox-label"><input type="checkbox" id="fEvidenza" /> In evidenza</label>
             <label class="checkbox-label"><input type="checkbox" id="fAlcolico" /> Alcolico</label>
           </div>
         </div>
-        <div class="modal-footer">
-          <button type="button" id="cancelModal" class="btn btn-ghost">Annulla</button>
-          <button type="submit" class="btn btn-primary" id="saveProdottoBtn">Salva prodotto</button>
-        </div>
+        <div class="modal-footer"><button type="button" id="cancelModal" class="btn btn-ghost">Annulla</button><button type="submit" class="btn btn-primary">Salva</button></div>
       </form>
     </div>
   </div>
 </AdminLayout>
 
 <style>
-  /* [Stili invariati per la UI dell'admin] */
   .filtri-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
   .prodotto-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
   .prodotto-nome-cell { display: flex; align-items: center; gap: 12px; }
@@ -113,77 +71,42 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 <script>
   import { getFirebaseClient } from "../../lib/firebase-client";
   import { onAuthStateChanged } from "firebase/auth";
-  import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
+  import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
   const { auth, db } = getFirebaseClient();
-  
-  let prodotti: any[] = [];
-  let filteredProdotti: any[] = [];
-  let categorie: any[] = [];
-  let catMap: any = {};
+  let prodotti: any[] = []; let filteredProdotti: any[] = [];
+  let categorie: any[] = []; let catMap: any = {};
 
-  onAuthStateChanged(auth, async (user) => { 
+  onAuthStateChanged(auth, (user) => { 
     if (!user) window.location.href = "/admin"; 
-    else await caricaDatiDaFirebase();
-  });
+    else {
+      onSnapshot(query(collection(db, "categorie"), orderBy("ordinamento", "asc")), (snap) => {
+        categorie = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        catMap = Object.fromEntries(categorie.map((c: any) => [c.id, c]));
+        document.getElementById("filtroCat")!.innerHTML = `<option value="">Tutte</option>` + categorie.map(c => `<option value="${c.id}">${c.emoji || ''} ${c.nome}</option>`).join("");
+        document.getElementById("fCategoria")!.innerHTML = categorie.map(c => `<option value="${c.id}">${c.emoji || ''} ${c.nome}</option>`).join("");
+        if (prodotti.length > 0) renderTable();
+      });
 
-  async function caricaDatiDaFirebase() {
-    try {
-      // Carichiamo ENTRAMBI, prima le categorie e poi i prodotti
-      const [catSnap, prodSnap] = await Promise.all([
-        getDocs(collection(db, "categorie")),
-        getDocs(collection(db, "prodotti"))
-      ]);
-      
-      categorie = catSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a:any, b:any) => a.ordinamento - b.ordinamento);
-      catMap = Object.fromEntries(categorie.map((c: any) => [c.id, c]));
-
-      // Popola i menu a tendina con le categorie VERE di Firebase
-      const opzioniFiltro = `<option value="">Tutte le categorie</option>` + categorie.map(c => `<option value="${c.id}">${c.emoji || ''} ${c.nome}</option>`).join("");
-      const opzioniForm = categorie.map(c => `<option value="${c.id}">${c.emoji || ''} ${c.nome}</option>`).join("");
-      
-      document.getElementById("filtroCat")!.innerHTML = opzioniFiltro;
-      document.getElementById("fCategoria")!.innerHTML = opzioniForm;
-
-      prodotti = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      prodotti.sort((a, b) => a.nome.localeCompare(b.nome));
-      
-      applyFilters();
-    } catch (error) {
-      document.getElementById("prodottiBody")!.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Errore di connessione a Firebase!</td></tr>`;
+      onSnapshot(collection(db, "prodotti"), (snap) => {
+        // 🔥 ECCO LA RIGA CORRETTA E RESA INVINCIBILE PER TYPESCRIPT 🔥
+        prodotti = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => (a.nome || "").localeCompare(b.nome || ""));
+        applyFilters();
+      });
     }
-  }
+  });
 
   function renderTable() {
     const tbody = document.getElementById("prodottiBody")!;
-    if (filteredProdotti.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Nessun prodotto trovato.</td></tr>`;
-      return;
-    }
+    if (filteredProdotti.length === 0) { tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Nessun prodotto.</td></tr>`; return; }
     tbody.innerHTML = filteredProdotti.map(p => `
       <tr>
-        <td class="prodotto-nome-cell">
-          <img class="prodotto-thumb" src="${p.immagine || '/images/placeholder.svg'}" onerror="this.src='/images/placeholder.svg'" />
-          <span>${p.nome}</span>
-        </td>
+        <td class="prodotto-nome-cell"><img class="prodotto-thumb" src="${p.immagine || '/images/placeholder.svg'}" onerror="this.src='/images/placeholder.svg'" /><span>${p.nome}</span></td>
         <td>${catMap[p.categoriaId]?.emoji || ""} ${catMap[p.categoriaId]?.nome || p.categoriaId}</td>
         <td><strong>€ ${Number(p.prezzo).toFixed(2).replace('.', ',')}</strong></td>
-        <td>
-          <label class="toggle-switch">
-            <input type="checkbox" ${p.disponibile ? 'checked' : ''} onchange="toggleDisponibile('${p.id}', this.checked)" />
-            <span class="toggle-slider"></span>
-          </label>
-        </td>
-        <td>
-          <label class="toggle-switch">
-            <input type="checkbox" ${p.inEvidenza ? 'checked' : ''} onchange="toggleEvidenza('${p.id}', this.checked)" />
-            <span class="toggle-slider"></span>
-          </label>
-        </td>
-        <td class="azioni-cell">
-          <button class="btn btn-ghost btn-sm" onclick="editProdotto('${p.id}')">✏️</button>
-          <button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);" onclick="deleteProdotto('${p.id}')">🗑</button>
-        </td>
+        <td><label class="toggle-switch"><input type="checkbox" ${p.disponibile ? 'checked' : ''} onchange="toggleDisponibile('${p.id}', this.checked)" /><span class="toggle-slider"></span></label></td>
+        <td><label class="toggle-switch"><input type="checkbox" ${p.inEvidenza ? 'checked' : ''} onchange="toggleEvidenza('${p.id}', this.checked)" /><span class="toggle-slider"></span></label></td>
+        <td class="azioni-cell"><button class="btn btn-ghost btn-sm" onclick="editProdotto('${p.id}')">✏️</button><button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);" onclick="deleteProdotto('${p.id}')">🗑</button></td>
       </tr>
     `).join("");
   }
@@ -191,11 +114,7 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
   function applyFilters() {
     const search = (document.getElementById("searchInput") as HTMLInputElement)?.value.toLowerCase() || "";
     const cat = (document.getElementById("filtroCat") as HTMLSelectElement)?.value || "";
-    filteredProdotti = prodotti.filter((p: any) => {
-      if (search && !p.nome.toLowerCase().includes(search)) return false;
-      if (cat && p.categoriaId !== cat) return false;
-      return true;
-    });
+    filteredProdotti = prodotti.filter((p: any) => (!search || (p.nome || "").toLowerCase().includes(search)) && (!cat || p.categoriaId === cat));
     renderTable();
   }
 
@@ -206,11 +125,8 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
   const form = document.getElementById("prodottoForm") as HTMLFormElement;
 
   function openModal(prodotto?: any) {
-    if (categorie.length === 0) {
-      alert("⚠️ Devi prima creare almeno una Categoria dal menu laterale!");
-      return;
-    }
-    (document.getElementById("modalTitle") as HTMLElement).textContent = prodotto ? "Modifica prodotto" : "Nuovo prodotto";
+    if (categorie.length === 0) return alert("Crea prima una Categoria!");
+    (document.getElementById("modalTitle") as HTMLElement).textContent = prodotto ? "Modifica" : "Nuovo";
     (document.getElementById("prodottoId") as HTMLInputElement).value = prodotto?.id || "";
     (document.getElementById("fNome") as HTMLInputElement).value = prodotto?.nome || "";
     (document.getElementById("fCategoria") as HTMLSelectElement).value = prodotto?.categoriaId || categorie[0].id;
@@ -230,54 +146,18 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 
   form?.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const btn = document.getElementById("saveProdottoBtn") as HTMLButtonElement;
-    btn.disabled = true; btn.textContent = "Salvataggio...";
-
     const id = (document.getElementById("prodottoId") as HTMLInputElement).value || `prod_${Date.now()}`; 
-    const nuovoProdotto = {
-      nome: (document.getElementById("fNome") as HTMLInputElement).value,
-      categoriaId: (document.getElementById("fCategoria") as HTMLSelectElement).value,
-      prezzo: parseFloat((document.getElementById("fPrezzo") as HTMLInputElement).value),
-      descrizione: (document.getElementById("fDescrizione") as HTMLTextAreaElement).value,
-      immagine: (document.getElementById("fImmagine") as HTMLInputElement).value || "/images/placeholder.svg",
-      gradazione: (document.getElementById("fGradazione") as HTMLInputElement).value || null,
-      disponibile: (document.getElementById("fDisponibile") as HTMLInputElement).checked,
-      inEvidenza: (document.getElementById("fEvidenza") as HTMLInputElement).checked,
-      alcolico: (document.getElementById("fAlcolico") as HTMLInputElement).checked,
-    };
-
-    try {
-      await setDoc(doc(db, "prodotti", id), nuovoProdotto);
-      
-      // Quando il gestore modifica un prodotto, distruggiamo la cache per i clienti!
-      sessionStorage.removeItem("shoop_menu_data");
-
-      const prodottoCompleto = { id, ...nuovoProdotto };
-      const idx = prodotti.findIndex((p: any) => p.id === id);
-      if (idx >= 0) prodotti[idx] = prodottoCompleto; else prodotti.push(prodottoCompleto);
-      applyFilters();
-      modal.style.display = "none";
-    } catch (err) {
-      alert("Errore salvataggio Firebase.");
-    } finally {
-      btn.disabled = false; btn.textContent = "Salva prodotto";
-    }
+    await setDoc(doc(db, "prodotti", id), {
+      nome: (document.getElementById("fNome") as HTMLInputElement).value, categoriaId: (document.getElementById("fCategoria") as HTMLSelectElement).value,
+      prezzo: parseFloat((document.getElementById("fPrezzo") as HTMLInputElement).value), descrizione: (document.getElementById("fDescrizione") as HTMLTextAreaElement).value,
+      immagine: (document.getElementById("fImmagine") as HTMLInputElement).value || "/images/placeholder.svg", gradazione: (document.getElementById("fGradazione") as HTMLInputElement).value || null,
+      disponibile: (document.getElementById("fDisponibile") as HTMLInputElement).checked, inEvidenza: (document.getElementById("fEvidenza") as HTMLInputElement).checked, alcolico: (document.getElementById("fAlcolico") as HTMLInputElement).checked,
+    });
+    modal.style.display = "none";
   });
 
   (window as any).editProdotto = (id: string) => openModal(prodotti.find((p: any) => p.id === id));
-  (window as any).toggleDisponibile = async (id: string, val: boolean) => {
-    const idx = prodotti.findIndex((p: any) => p.id === id);
-    if (idx >= 0) { prodotti[idx].disponibile = val; await updateDoc(doc(db, "prodotti", id), { disponibile: val }); sessionStorage.removeItem("shoop_menu_data"); }
-  };
-  (window as any).toggleEvidenza = async (id: string, val: boolean) => {
-    const idx = prodotti.findIndex((p: any) => p.id === id);
-    if (idx >= 0) { prodotti[idx].inEvidenza = val; await updateDoc(doc(db, "prodotti", id), { inEvidenza: val }); }
-  };
-  (window as any).deleteProdotto = async (id: string) => {
-    if (!confirm("Sei sicuro?")) return;
-    await deleteDoc(doc(db, "prodotti", id));
-    sessionStorage.removeItem("shoop_menu_data");
-    prodotti = prodotti.filter((p: any) => p.id !== id);
-    applyFilters();
-  };
+  (window as any).toggleDisponibile = async (id: string, val: boolean) => await updateDoc(doc(db, "prodotti", id), { disponibile: val });
+  (window as any).toggleEvidenza = async (id: string, val: boolean) => await updateDoc(doc(db, "prodotti", id), { inEvidenza: val });
+  (window as any).deleteProdotto = async (id: string) => { if (confirm("Sicuro?")) await deleteDoc(doc(db, "prodotti", id)); };
 </script>

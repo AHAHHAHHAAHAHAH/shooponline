@@ -5,54 +5,27 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 <AdminLayout title="Gestione Categorie" activeNav="categorie">
   <div class="page-header">
     <div style="display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <h1>Categorie Menu</h1>
-        <p>Aggiungi e ordina le categorie del tuo menu (Live su Firebase 🔥)</p>
-      </div>
+      <div><h1>Categorie</h1><p>Gestisci le categorie (Live su Firebase 🔥)</p></div>
       <button class="btn btn-primary" id="btnNuovaCategoria">+ Nuova Categoria</button>
     </div>
   </div>
 
   <div class="card" style="overflow:hidden;">
-    <table class="table-admin" id="catTable">
-      <thead>
-        <tr>
-          <th>Ordine</th>
-          <th>Emoji</th>
-          <th>Nome Categoria</th>
-          <th>Azioni</th>
-        </tr>
-      </thead>
-      <tbody id="catBody">
-        <tr><td colspan="4" style="text-align:center; padding: 20px;">Caricamento categorie...</td></tr>
-      </tbody>
+    <table class="table-admin">
+      <thead><tr><th>Ordine</th><th>Emoji</th><th>Nome</th><th>Azioni</th></tr></thead>
+      <tbody id="catBody"><tr><td colspan="4" style="text-align:center; padding: 20px;">Caricamento...</td></tr></tbody>
     </table>
   </div>
 
   <div id="catModal" class="modal-overlay" style="display:none;">
     <div class="modal-card" style="max-width: 500px;">
-      <div class="modal-header">
-        <h3 id="modalTitle">Nuova Categoria</h3>
-        <button id="closeModal" class="modal-close">✕</button>
-      </div>
+      <div class="modal-header"><h3 id="modalTitle">Nuova Categoria</h3><button id="closeModal" class="modal-close">✕</button></div>
       <form id="catForm" class="modal-body">
         <input type="hidden" id="catId" />
-        <div class="form-group" style="margin-bottom:16px;">
-          <label class="label">Nome Categoria *</label>
-          <input type="text" id="fNome" class="input" placeholder="es. Birre Artigianali" required />
-        </div>
-        <div class="form-group" style="margin-bottom:16px;">
-          <label class="label">Emoji (Opzionale)</label>
-          <input type="text" id="fEmoji" class="input" placeholder="es. 🍺" />
-        </div>
-        <div class="form-group" style="margin-bottom:16px;">
-          <label class="label">Ordinamento (Numero) *</label>
-          <input type="number" id="fOrdine" class="input" placeholder="1 = In alto, 99 = In basso" required />
-        </div>
-        <div class="modal-footer">
-          <button type="button" id="cancelModal" class="btn btn-ghost">Annulla</button>
-          <button type="submit" class="btn btn-primary" id="saveCatBtn">Salva Categoria</button>
-        </div>
+        <div class="form-group" style="margin-bottom:16px;"><label class="label">Nome *</label><input type="text" id="fNome" class="input" required /></div>
+        <div class="form-group" style="margin-bottom:16px;"><label class="label">Emoji</label><input type="text" id="fEmoji" class="input" /></div>
+        <div class="form-group" style="margin-bottom:16px;"><label class="label">Ordinamento *</label><input type="number" id="fOrdine" class="input" required /></div>
+        <div class="modal-footer"><button type="button" id="cancelModal" class="btn btn-ghost">Annulla</button><button type="submit" class="btn btn-primary">Salva</button></div>
       </form>
     </div>
   </div>
@@ -71,50 +44,32 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 <script>
   import { getFirebaseClient } from "../../lib/firebase-client";
   import { onAuthStateChanged } from "firebase/auth";
-  import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+  import { collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc } from "firebase/firestore";
 
   const { auth, db } = getFirebaseClient();
   let categorie: any[] = [];
 
-  onAuthStateChanged(auth, async (user) => { 
+  onAuthStateChanged(auth, (user) => { 
     if (!user) window.location.href = "/admin"; 
-    else await caricaCategorie();
+    else {
+      // Magia: ogni modifica a Firebase aggiorna la tabella in tempo reale!
+      onSnapshot(query(collection(db, "categorie"), orderBy("ordinamento", "asc")), (snap) => {
+        categorie = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const tbody = document.getElementById("catBody")!;
+        if (categorie.length === 0) { tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:20px;">Nessuna categoria.</td></tr>`; return; }
+        tbody.innerHTML = categorie.map(c => `
+          <tr><td><strong>${c.ordinamento}</strong></td><td style="font-size:1.5rem;">${c.emoji || ''}</td><td><strong>${c.nome}</strong></td>
+          <td class="azioni-cell"><button class="btn btn-ghost btn-sm" onclick="editCat('${c.id}')">✏️</button><button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);" onclick="deleteCat('${c.id}')">🗑</button></td></tr>
+        `).join("");
+      });
+    }
   });
-
-  async function caricaCategorie() {
-    try {
-      const snapshot = await getDocs(collection(db, "categorie"));
-      categorie = snapshot.docs.map(d => ({ id: d.id, ...d.data() })).sort((a:any, b:any) => a.ordinamento - b.ordinamento);
-      renderTable();
-    } catch (e) {
-      document.getElementById("catBody")!.innerHTML = `<tr><td colspan="4" style="color:red; text-align:center;">Errore di connessione a Firebase!</td></tr>`;
-    }
-  }
-
-  function renderTable() {
-    const tbody = document.getElementById("catBody")!;
-    if (categorie.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">Nessuna categoria. Creane una!</td></tr>`;
-      return;
-    }
-    tbody.innerHTML = categorie.map(c => `
-      <tr>
-        <td><strong>${c.ordinamento}</strong></td>
-        <td style="font-size:1.5rem;">${c.emoji || ''}</td>
-        <td><strong>${c.nome}</strong></td>
-        <td class="azioni-cell">
-          <button class="btn btn-ghost btn-sm" onclick="editCat('${c.id}')">✏️</button>
-          <button class="btn btn-sm" style="background:var(--danger-bg);color:var(--danger);" onclick="deleteCat('${c.id}')">🗑</button>
-        </td>
-      </tr>
-    `).join("");
-  }
 
   const modal = document.getElementById("catModal")!;
   const form = document.getElementById("catForm") as HTMLFormElement;
 
   function openModal(cat?: any) {
-    (document.getElementById("modalTitle") as HTMLElement).textContent = cat ? "Modifica Categoria" : "Nuova Categoria";
+    (document.getElementById("modalTitle") as HTMLElement).textContent = cat ? "Modifica" : "Nuova";
     (document.getElementById("catId") as HTMLInputElement).value = cat?.id || "";
     (document.getElementById("fNome") as HTMLInputElement).value = cat?.nome || "";
     (document.getElementById("fEmoji") as HTMLInputElement).value = cat?.emoji || "";
@@ -128,36 +83,15 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    const btn = document.getElementById("saveCatBtn") as HTMLButtonElement;
-    btn.disabled = true; btn.textContent = "Salvataggio...";
-
     const id = (document.getElementById("catId") as HTMLInputElement).value || `cat_${Date.now()}`; 
-    const nuovaCat = {
+    await setDoc(doc(db, "categorie", id), {
       nome: (document.getElementById("fNome") as HTMLInputElement).value,
       emoji: (document.getElementById("fEmoji") as HTMLInputElement).value,
       ordinamento: parseInt((document.getElementById("fOrdine") as HTMLInputElement).value),
-    };
-
-    try {
-      await setDoc(doc(db, "categorie", id), nuovaCat);
-      
-      // Essendo cambiata una categoria, CANCELLIAMO LA CACHE DEI CLIENTI!
-      sessionStorage.removeItem("shoop_menu_data");
-      
-      await caricaCategorie();
-      modal.style.display = "none";
-    } catch (err) {
-      alert("Errore salvataggio Firebase.");
-    } finally {
-      btn.disabled = false; btn.textContent = "Salva Categoria";
-    }
+    });
+    modal.style.display = "none";
   });
 
   (window as any).editCat = (id: string) => openModal(categorie.find((c: any) => c.id === id));
-  (window as any).deleteCat = async (id: string) => {
-    if (!confirm("Se elimini questa categoria i prodotti associati non si vedranno più nel menu finché non li riassegni. Procedere?")) return;
-    await deleteDoc(doc(db, "categorie", id));
-    sessionStorage.removeItem("shoop_menu_data"); // Reset cache
-    await caricaCategorie();
-  };
+  (window as any).deleteCat = async (id: string) => { if(confirm("Sicuro?")) await deleteDoc(doc(db, "categorie", id)); };
 </script>
