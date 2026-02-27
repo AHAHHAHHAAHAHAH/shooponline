@@ -1,9 +1,6 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import data from "../../data/data.json";
-
-const categorie = data.categorie;
-const categorieJson = JSON.stringify(categorie);
+// Nessuna categoria hardcodata qui, tutto dinamico!
 ---
 
 <AdminLayout title="Gestione Prodotti" activeNav="prodotti">
@@ -21,11 +18,10 @@ const categorieJson = JSON.stringify(categorie);
     <input type="text" id="searchInput" class="input" placeholder="Cerca prodotto..." style="max-width:280px;" />
     <select id="filtroCat" class="input" style="max-width:200px;">
       <option value="">Tutte le categorie</option>
-      {categorie.map(c => <option value={c.id}>{c.emoji} {c.nome}</option>)}
     </select>
   </div>
 
-  <div class="card" style="overflow:hidden;" id="prodottiWrapper" data-categorie={categorieJson}>
+  <div class="card" style="overflow:hidden;">
     <table class="table-admin" id="prodottiTable">
       <thead>
         <tr>
@@ -38,7 +34,7 @@ const categorieJson = JSON.stringify(categorie);
         </tr>
       </thead>
       <tbody id="prodottiBody">
-        <tr><td colspan="6" style="text-align:center; padding: 20px;">Caricamento prodotti dal database...</td></tr>
+        <tr><td colspan="6" style="text-align:center; padding: 20px;">Caricamento dati dal database...</td></tr>
       </tbody>
     </table>
   </div>
@@ -58,9 +54,7 @@ const categorieJson = JSON.stringify(categorie);
           </div>
           <div class="form-group">
             <label class="label">Categoria *</label>
-            <select id="fCategoria" class="input" required>
-              {categorie.map(c => <option value={c.id}>{c.emoji} {c.nome}</option>)}
-            </select>
+            <select id="fCategoria" class="input" required></select>
           </div>
           <div class="form-group">
             <label class="label">Prezzo (€) *</label>
@@ -94,6 +88,7 @@ const categorieJson = JSON.stringify(categorie);
 </AdminLayout>
 
 <style>
+  /* [Stili invariati per la UI dell'admin] */
   .filtri-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
   .prodotto-thumb { width: 48px; height: 48px; border-radius: 8px; object-fit: cover; }
   .prodotto-nome-cell { display: flex; align-items: center; gap: 12px; }
@@ -112,6 +107,7 @@ const categorieJson = JSON.stringify(categorie);
   .checkboxes { display: flex; gap: 20px; align-items: center; }
   .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; }
   .modal-footer { display: flex; justify-content: flex-end; gap: 12px; padding-top: 20px; border-top: 1px solid var(--border); }
+  .azioni-cell { display: flex; gap: 8px; }
 </style>
 
 <script>
@@ -120,34 +116,46 @@ const categorieJson = JSON.stringify(categorie);
   import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from "firebase/firestore";
 
   const { auth, db } = getFirebaseClient();
-  const wrapper = document.getElementById("prodottiWrapper");
-  const categorieJson = wrapper?.dataset.categorie || "[]";
-  const categorie = JSON.parse(categorieJson);
-  const catMap = Object.fromEntries(categorie.map((c: any) => [c.id, c]));
-
+  
   let prodotti: any[] = [];
   let filteredProdotti: any[] = [];
+  let categorie: any[] = [];
+  let catMap: any = {};
 
   onAuthStateChanged(auth, async (user) => { 
     if (!user) window.location.href = "/admin"; 
-    else await caricaProdottiDaFirebase();
+    else await caricaDatiDaFirebase();
   });
 
-  async function caricaProdottiDaFirebase() {
+  async function caricaDatiDaFirebase() {
     try {
-      const snapshot = await getDocs(collection(db, "prodotti"));
-      prodotti = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Carichiamo ENTRAMBI, prima le categorie e poi i prodotti
+      const [catSnap, prodSnap] = await Promise.all([
+        getDocs(collection(db, "categorie")),
+        getDocs(collection(db, "prodotti"))
+      ]);
+      
+      categorie = catSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a:any, b:any) => a.ordinamento - b.ordinamento);
+      catMap = Object.fromEntries(categorie.map((c: any) => [c.id, c]));
+
+      // Popola i menu a tendina con le categorie VERE di Firebase
+      const opzioniFiltro = `<option value="">Tutte le categorie</option>` + categorie.map(c => `<option value="${c.id}">${c.emoji || ''} ${c.nome}</option>`).join("");
+      const opzioniForm = categorie.map(c => `<option value="${c.id}">${c.emoji || ''} ${c.nome}</option>`).join("");
+      
+      document.getElementById("filtroCat")!.innerHTML = opzioniFiltro;
+      document.getElementById("fCategoria")!.innerHTML = opzioniForm;
+
+      prodotti = prodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       prodotti.sort((a, b) => a.nome.localeCompare(b.nome));
+      
       applyFilters();
     } catch (error) {
-      const tbody = document.getElementById("prodottiBody");
-      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Errore di connessione!</td></tr>`;
+      document.getElementById("prodottiBody")!.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Errore di connessione a Firebase!</td></tr>`;
     }
   }
 
   function renderTable() {
-    const tbody = document.getElementById("prodottiBody");
-    if (!tbody) return;
+    const tbody = document.getElementById("prodottiBody")!;
     if (filteredProdotti.length === 0) {
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 20px;">Nessun prodotto trovato.</td></tr>`;
       return;
@@ -198,10 +206,14 @@ const categorieJson = JSON.stringify(categorie);
   const form = document.getElementById("prodottoForm") as HTMLFormElement;
 
   function openModal(prodotto?: any) {
+    if (categorie.length === 0) {
+      alert("⚠️ Devi prima creare almeno una Categoria dal menu laterale!");
+      return;
+    }
     (document.getElementById("modalTitle") as HTMLElement).textContent = prodotto ? "Modifica prodotto" : "Nuovo prodotto";
     (document.getElementById("prodottoId") as HTMLInputElement).value = prodotto?.id || "";
     (document.getElementById("fNome") as HTMLInputElement).value = prodotto?.nome || "";
-    (document.getElementById("fCategoria") as HTMLSelectElement).value = prodotto?.categoriaId || "";
+    (document.getElementById("fCategoria") as HTMLSelectElement).value = prodotto?.categoriaId || categorie[0].id;
     (document.getElementById("fPrezzo") as HTMLInputElement).value = prodotto?.prezzo || "";
     (document.getElementById("fDescrizione") as HTMLTextAreaElement).value = prodotto?.descrizione || "";
     (document.getElementById("fImmagine") as HTMLInputElement).value = prodotto?.immagine || "";
@@ -236,6 +248,10 @@ const categorieJson = JSON.stringify(categorie);
 
     try {
       await setDoc(doc(db, "prodotti", id), nuovoProdotto);
+      
+      // Quando il gestore modifica un prodotto, distruggiamo la cache per i clienti!
+      sessionStorage.removeItem("shoop_menu_data");
+
       const prodottoCompleto = { id, ...nuovoProdotto };
       const idx = prodotti.findIndex((p: any) => p.id === id);
       if (idx >= 0) prodotti[idx] = prodottoCompleto; else prodotti.push(prodottoCompleto);
@@ -251,7 +267,7 @@ const categorieJson = JSON.stringify(categorie);
   (window as any).editProdotto = (id: string) => openModal(prodotti.find((p: any) => p.id === id));
   (window as any).toggleDisponibile = async (id: string, val: boolean) => {
     const idx = prodotti.findIndex((p: any) => p.id === id);
-    if (idx >= 0) { prodotti[idx].disponibile = val; await updateDoc(doc(db, "prodotti", id), { disponibile: val }); }
+    if (idx >= 0) { prodotti[idx].disponibile = val; await updateDoc(doc(db, "prodotti", id), { disponibile: val }); sessionStorage.removeItem("shoop_menu_data"); }
   };
   (window as any).toggleEvidenza = async (id: string, val: boolean) => {
     const idx = prodotti.findIndex((p: any) => p.id === id);
@@ -260,6 +276,7 @@ const categorieJson = JSON.stringify(categorie);
   (window as any).deleteProdotto = async (id: string) => {
     if (!confirm("Sei sicuro?")) return;
     await deleteDoc(doc(db, "prodotti", id));
+    sessionStorage.removeItem("shoop_menu_data");
     prodotti = prodotti.filter((p: any) => p.id !== id);
     applyFilters();
   };

@@ -2,9 +2,7 @@
 import Layout from "../layouts/Layout.astro";
 import data from "../data/data.json";
 
-// Manteniamo solo le categorie dal JSON per disegnare l'interfaccia
-const categorie = data.categorie;
-const categorieJson = JSON.stringify(categorie);
+// NON leggiamo più le categorie dal file JSON!
 ---
 
 <Layout title={`Menu — ${data.pub.nome}`} description={`Esplora il menu di ${data.pub.nome}`}>
@@ -17,11 +15,10 @@ const categorieJson = JSON.stringify(categorie);
 
   <div class="container menu-layout">
     <aside class="menu-sidebar">
-      <div class="menu-sidebar-inner" id="categoriaNav">
-      </div>
+      <div class="menu-sidebar-inner" id="categoriaNav"></div>
     </aside>
 
-    <main class="menu-content" id="menuContent" data-categorie={categorieJson}>
+    <main class="menu-content" id="menuContent">
       <div style="text-align:center; padding: 40px; color: var(--accent);">
         <span class="spinner" style="border-color: var(--accent) transparent var(--accent) transparent;"></span>
         <p>Caricamento menu in corso...</p>
@@ -31,6 +28,7 @@ const categorieJson = JSON.stringify(categorie);
 </Layout>
 
 <style>
+  /* [Gli stili rimangono IDENTICI ai tuoi originali perfetti] */
   .menu-hero { padding: 80px 24px 40px; text-align: center; border-bottom: 1px solid var(--border); }
   .menu-hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); margin-bottom: 12px; }
   .menu-layout { display: flex; gap: 48px; padding: 48px 24px 80px; align-items: flex-start; }
@@ -70,23 +68,49 @@ const categorieJson = JSON.stringify(categorie);
   import { getFirebaseClient } from "../lib/firebase-client";
   import { collection, getDocs } from "firebase/firestore";
 
+  const CACHE_KEY = "shoop_menu_data";
+  const CACHE_TIME_KEY = "shoop_menu_time";
+  const CACHE_TTL = 15 * 60 * 1000; // 15 Minuti in millisecondi
+
   async function caricaMenu() {
     const navEl = document.getElementById("categoriaNav");
     const contentEl = document.getElementById("menuContent");
     if (!contentEl || !navEl) return;
 
-    // Legge le categorie passate da Astro senza spaccare TypeScript
-    const categorieJson = contentEl.dataset.categorie || "[]";
-    const categorie = JSON.parse(categorieJson);
-    const { db } = getFirebaseClient();
+    let categorie: any[] = [];
+    let prodotti: any[] = [];
     
+    const now = Date.now();
+    const cachedData = sessionStorage.getItem(CACHE_KEY);
+    const cachedTime = sessionStorage.getItem(CACHE_TIME_KEY);
+
     try {
-      const snapshot = await getDocs(collection(db, "prodotti"));
-      const prodotti = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as any }));
-      
+      // LOGICA DI CACHING AVANZATA (La "A")
+      if (cachedData && cachedTime && (now - parseInt(cachedTime) < CACHE_TTL)) {
+        // Usa la memoria del telefono (Zero chiamate a Firebase!)
+        const parsed = JSON.parse(cachedData);
+        categorie = parsed.categorie;
+        prodotti = parsed.prodotti;
+      } else {
+        // Dati vecchi o inesistenti: Scarica da Firebase
+        const { db } = getFirebaseClient();
+        const [catSnap, prodSnap] = await Promise.all([
+          getDocs(collection(db, "categorie")),
+          getDocs(collection(db, "prodotti"))
+        ]);
+        
+        categorie = catSnap.docs.map(d => ({ id: d.id, ...d.data() as any }))
+                    .sort((a, b) => a.ordinamento - b.ordinamento);
+        prodotti = prodSnap.docs.map(d => ({ id: d.id, ...d.data() as any }));
+
+        // Salva nel "taccuino" del browser
+        sessionStorage.setItem(CACHE_KEY, JSON.stringify({ categorie, prodotti }));
+        sessionStorage.setItem(CACHE_TIME_KEY, now.toString());
+      }
+
       const prodottiAttivi = prodotti.filter(p => p.disponibile !== false);
 
-      if (prodottiAttivi.length === 0) {
+      if (categorie.length === 0 || prodottiAttivi.length === 0) {
         contentEl.innerHTML = `<div style="text-align:center; padding:40px;">Il menu è in aggiornamento. Torna a breve!</div>`;
         return;
       }
@@ -98,11 +122,11 @@ const categorieJson = JSON.stringify(categorie);
         const prodottiCat = prodottiAttivi.filter((p: any) => p.categoriaId === cat.id);
         if (prodottiCat.length === 0) return;
 
-        htmlNav += `<a href="#cat-${cat.id}" class="cat-link ${index === 0 ? 'active' : ''}">${cat.emoji} ${cat.nome}</a>`;
+        htmlNav += `<a href="#cat-${cat.id}" class="cat-link ${index === 0 ? 'active' : ''}">${cat.emoji || ''} ${cat.nome}</a>`;
 
         htmlContent += `
           <div class="categoria-section" id="cat-${cat.id}">
-            <h2 class="categoria-title">${cat.emoji} ${cat.nome}</h2>
+            <h2 class="categoria-title">${cat.emoji || ''} ${cat.nome}</h2>
             <div class="prodotti-grid">
               ${prodottiCat.map((p: any) => `
                 <div class="prodotto-card">
@@ -141,25 +165,12 @@ const categorieJson = JSON.stringify(categorie);
 
   const CART_KEY = "puborder_cart";
   (window as any).aggiungiAlCarrello = function(prodotto: any) {
-    try {
-      let cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
-      const idx = cart.findIndex((i: any) => i.id === prodotto.id);
-      if (idx >= 0) {
-        cart[idx].quantita += 1;
-      } else {
-        cart.push({
-          id: prodotto.id,
-          nome: prodotto.nome,
-          prezzo: Number(prodotto.prezzo),
-          immagine: prodotto.immagine || '/images/placeholder.svg',
-          quantita: 1
-        });
-      }
-      localStorage.setItem(CART_KEY, JSON.stringify(cart));
-      alert(`✅ ${prodotto.nome} aggiunto al carrello!`);
-    } catch(e) {
-      console.error(e);
-    }
+    let cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+    const idx = cart.findIndex((i: any) => i.id === prodotto.id);
+    if (idx >= 0) cart[idx].quantita += 1;
+    else cart.push({ id: prodotto.id, nome: prodotto.nome, prezzo: Number(prodotto.prezzo), immagine: prodotto.immagine || '/images/placeholder.svg', quantita: 1 });
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    alert(`✅ ${prodotto.nome} aggiunto al carrello!`);
   };
 
   caricaMenu();
