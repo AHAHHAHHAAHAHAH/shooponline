@@ -1,25 +1,19 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import { db } from "../../lib/firebase-client";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 
-// Caricamento iniziale usando il client SDK
-const ordiniSnapshot = await getDocs(query(collection(db, "ordini"), orderBy("creatoAt", "desc"), limit(50)));
-
-const ordiniIniziali = ordiniSnapshot.docs.map(doc => ({
-  id: doc.id,
-  ...doc.data()
-}));
+// NESSUNA chiamata Firebase qui sul server!
 ---
 
-<AdminLayout title="Gestione Ordini">
+<AdminLayout title="Gestione Ordini" activeNav="ordini">
   <div class="admin-header">
     <h1>Ordini in arrivo</h1>
     <div class="status-badge">🟢 In ascolto...</div>
   </div>
 
   <div class="ordini-grid" id="ordiniContainer">
-    {/* Gli ordini verranno renderizzati e aggiornati qui da JS */}
+    <div style="text-align:center; padding: 40px; grid-column: 1/-1;">
+      Caricamento ordini in corso...
+    </div>
   </div>
 
   <audio id="notificationSound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
@@ -51,93 +45,105 @@ const ordiniIniziali = ordiniSnapshot.docs.map(doc => ({
 <script>
   import { getFirebaseClient } from "../../lib/firebase-client";
   import { collection, query, orderBy, limit, onSnapshot, updateDoc, doc } from "firebase/firestore";
+  import { onAuthStateChanged } from "firebase/auth";
 
-  const { db } = getFirebaseClient();
+  const { auth, db } = getFirebaseClient();
   const container = document.getElementById("ordiniContainer")!;
   const sound = document.getElementById("notificationSound") as HTMLAudioElement;
   
-  let isFirstLoad = true;
-
-  // Query per ascoltare gli ordini in tempo reale
-  const q = query(collection(db, "ordini"), orderBy("creatoAt", "desc"), limit(50));
-
-  onSnapshot(q, (snapshot) => {
-    // 1. Suona la notifica se c'è un NUOVO ordine (e non è il caricamento iniziale della pagina)
-    if (!isFirstLoad) {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added") {
-          sound.play().catch(e => console.log("Impossibile riprodurre audio in automatico", e));
-        }
-      });
+  // Controllo Autenticazione: Mostra gli ordini solo se Firebase conferma che sei loggato
+  onAuthStateChanged(auth, (user) => { 
+    if (!user) {
+      window.location.href = "/admin"; 
+    } else {
+      iniziaAscoltoOrdini();
     }
-    isFirstLoad = false;
-
-    // 2. Ridisegna la lista degli ordini
-    container.innerHTML = ""; // Svuota contenitore
-
-    snapshot.docs.forEach((documento) => {
-      const ordine = documento.data();
-      const id = documento.id;
-      
-      const card = document.createElement("div");
-      card.className = "ordine-card";
-      
-      // Formattazione data
-      const dataFormat = ordine.creatoAt?.toDate ? 
-        ordine.creatoAt.toDate().toLocaleTimeString() : "Ora sconosciuta";
-
-      const itemsHtml = ordine.items.map((i: any) => `
-        <li>
-          <span>${i.quantita}x ${i.nomeProdotto}</span>
-          <span>€${i.totaleRiga.toFixed(2)}</span>
-        </li>
-      `).join("");
-
-      // Creazione HTML della card
-      card.innerHTML = `
-        <div class="ordine-header">
-          <span class="tavolo-badge">Tavolo ${ordine.numeroTavolo}</span>
-          <span class="stato-badge stato-${ordine.stato}">
-            ${ordine.stato === 'in_attesa' ? '⏳ In Attesa' : '✅ Ricevuto'}
-          </span>
-        </div>
-        <div>
-          <small style="color: gray;">Ordine: ${id.slice(-6)} • Ore: ${dataFormat}</small>
-          <br/>
-          <small>Metodo: <strong>${ordine.metodoPagamento.toUpperCase()}</strong> - Pagato: ${ordine.pagato ? 'Sì' : 'No'}</small>
-        </div>
-        <ul class="items-list">
-          ${itemsHtml}
-        </ul>
-        ${ordine.noteOrdine ? `<div style="background: rgba(231, 76, 60, 0.2); padding: 8px; border-radius: 4px; font-size:0.85rem;"><strong>Note:</strong> ${ordine.noteOrdine}</div>` : ''}
-        <div class="ordine-footer">
-          <span>Totale:</span>
-          <span>€${ordine.totale.toFixed(2)}</span>
-        </div>
-        <div style="display: flex; gap: 8px; margin-top: 12px;">
-          ${ordine.stato === 'in_attesa' ? 
-            `<button class="btn btn-primary btn-sm accetta-btn" data-id="${id}" style="flex:1;">Accetta Ordine</button>` : 
-            `<button class="btn btn-ghost btn-sm completa-btn" data-id="${id}" style="flex:1;">Segna come Completato</button>`
-          }
-        </div>
-      `;
-      
-      container.appendChild(card);
-    });
-
-    // Aggiungi eventi ai bottoni appena creati
-    document.querySelectorAll('.accetta-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const id = (e.target as HTMLButtonElement).dataset.id;
-        await updateDoc(doc(db, "ordini", id!), { stato: "ricevuto" });
-      });
-    });
-
-    document.querySelectorAll('.completa-btn').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const id = (e.target as HTMLButtonElement).dataset.id;
-        await updateDoc(doc(db, "ordini", id!), { stato: "completato" });
-      });
-    });
   });
+
+  function iniziaAscoltoOrdini() {
+    let isFirstLoad = true;
+    const q = query(collection(db, "ordini"), orderBy("creatoAt", "desc"), limit(50));
+    
+    onSnapshot(q, (snapshot) => {
+      // 1. Suona la notifica se c'è un NUOVO ordine
+      if (!isFirstLoad) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            sound.play().catch(e => console.log("Impossibile riprodurre audio", e));
+          }
+        });
+      }
+      isFirstLoad = false;
+
+      // Svuota contenitore
+      container.innerHTML = ""; 
+      
+      if (snapshot.empty) {
+        container.innerHTML = `<div style="text-align:center; padding: 40px; grid-column: 1/-1; color: var(--muted);">Nessun ordine presente.</div>`;
+        return;
+      }
+
+      // 2. Ridisegna la lista 
+      snapshot.docs.forEach((documento) => {
+        const ordine = documento.data();
+        const id = documento.id;
+        
+        const card = document.createElement("div");
+        card.className = "ordine-card";
+        
+        const dataFormat = ordine.creatoAt?.toDate ? 
+          ordine.creatoAt.toDate().toLocaleTimeString() : "Ora sconosciuta";
+
+        const itemsHtml = ordine.items.map((i: any) => `
+          <li>
+            <span>${i.quantita}x ${i.nomeProdotto}</span>
+            <span>€${i.totaleRiga.toFixed(2)}</span>
+          </li>
+        `).join("");
+        
+        card.innerHTML = `
+          <div class="ordine-header">
+            <span class="tavolo-badge">Tavolo ${ordine.numeroTavolo}</span>
+            <span class="stato-badge stato-${ordine.stato}">
+              ${ordine.stato === 'in_attesa' ? '⏳ In Attesa' : '✅ Ricevuto'}
+            </span>
+          </div>
+          <div>
+            <small style="color: gray;">Ordine: ${id.slice(-6)} • Ore: ${dataFormat}</small>
+            <br/>
+            <small>Metodo: <strong>${(ordine.metodoPagamento || 'cassa').toUpperCase()}</strong> - Pagato: ${ordine.pagato ? 'Sì' : 'No'}</small>
+          </div>
+          <ul class="items-list">
+            ${itemsHtml}
+          </ul>
+          ${ordine.noteOrdine ? `<div style="background: rgba(231, 76, 60, 0.2); padding: 8px; border-radius: 4px; font-size:0.85rem;"><strong>Note:</strong> ${ordine.noteOrdine}</div>` : ''}
+          <div class="ordine-footer">
+            <span>Totale:</span>
+            <span>€${Number(ordine.totale).toFixed(2)}</span>
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            ${ordine.stato === 'in_attesa' ? 
+              `<button class="btn btn-primary btn-sm accetta-btn" data-id="${id}" style="flex:1;">Accetta Ordine</button>` : 
+              `<button class="btn btn-ghost btn-sm completa-btn" data-id="${id}" style="flex:1;">Segna come Completato</button>`
+            }
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      // Aggiungi eventi ai bottoni
+      document.querySelectorAll('.accetta-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = (e.target as HTMLButtonElement).dataset.id;
+          await updateDoc(doc(db, "ordini", id!), { stato: "ricevuto" });
+        });
+      });
+      document.querySelectorAll('.completa-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const id = (e.target as HTMLButtonElement).dataset.id;
+          await updateDoc(doc(db, "ordini", id!), { stato: "completato" });
+        });
+      });
+    });
+  }
 </script>
