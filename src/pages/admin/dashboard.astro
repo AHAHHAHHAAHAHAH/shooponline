@@ -1,6 +1,5 @@
 ---
 import AdminLayout from "../../layouts/AdminLayout.astro";
-import data from "../../data/data.json";
 ---
 
 <AdminLayout title="Dashboard" activeNav="dashboard">
@@ -24,9 +23,7 @@ import data from "../../data/data.json";
       <div class="stat-label">In attesa</div>
     </div>
     <div class="stat-card">
-      <div class="stat-number" id="statProdottiAttivi">
-        {data.prodotti.filter(p => p.disponibile).length}
-      </div>
+      <div class="stat-number" id="statProdottiAttivi">—</div>
       <div class="stat-label">Prodotti attivi</div>
     </div>
   </div>
@@ -63,7 +60,6 @@ import data from "../../data/data.json";
   import { getFirebaseClient } from "../../lib/firebase-client";
   import { getAuth, onAuthStateChanged } from "firebase/auth";
   import { getFirestore, collection, query, orderBy, limit, onSnapshot, where, Timestamp } from "firebase/firestore";
-
   const { db, auth } = getFirebaseClient();
 
   onAuthStateChanged(auth, (user) => {
@@ -96,6 +92,13 @@ import data from "../../data/data.json";
       const incasso = ordini.filter(o => o.pagato).reduce((s: number, o: any) => s + (o.totale || 0), 0);
       document.getElementById("statIncassoOggi")!.textContent = `€ ${incasso.toFixed(2).replace('.', ',')}`;
       document.getElementById("statInAttesa")!.textContent = String(ordini.filter(o => o.stato === "in_attesa").length);
+    });
+
+    // Prodotti attivi in tempo reale (da Firebase, non da JSON statico)
+    onSnapshot(collection(db, "prodotti"), (snap) => {
+      const attivi = snap.docs.filter(d => d.data().disponibile !== false).length;
+      const el = document.getElementById("statProdottiAttivi");
+      if (el) el.textContent = String(attivi);
     });
 
     // Ultimi 8 ordini

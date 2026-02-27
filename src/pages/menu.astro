@@ -121,7 +121,7 @@ import data from "../data/data.json";
               ${prodottiCat.map((p: any) => `
                 <div class="prodotto-row">
                   <div class="prodotto-thumb-wrap">
-                    <img src="${p.immagine || '/images/placeholder.svg'}" onerror="this.src='/images/placeholder.svg'" />
+                    <img src="${p.immagine || '/images/placeholder.svg'}" onerror="this.src='/images/placeholder.svg'" alt="${(p.nome || '').replace(/"/g, '&quot;')}" loading="lazy" />
                   </div>
                   <div class="prodotto-row-info">
                     <div class="prodotto-row-header">
@@ -130,7 +130,7 @@ import data from "../data/data.json";
                     <div class="prodotto-row-desc">${p.descrizione || ''}</div>
                     <div class="prodotto-row-footer">
                       <div class="prodotto-row-price">€ ${Number(p.prezzo).toFixed(2).replace('.', ',')}</div>
-                      <button class="add-btn" onclick='aggiungiAlCarrello(${JSON.stringify(p).replace(/'/g, "&#39;")})'>+</button>
+                      <button class="add-btn" data-prodotto-id="${p.id}">+</button>
                     </div>
                   </div>
                 </div>
@@ -143,6 +143,16 @@ import data from "../data/data.json";
       navEl!.innerHTML = htmlNav;
       contentEl!.innerHTML = htmlContent;
       aggiornaBadgeCarrello();
+      
+      // Event delegation per i bottoni "+" — sicuro e senza XSS
+      contentEl!.addEventListener("click", (e) => {
+        const btn = (e.target as HTMLElement).closest(".add-btn") as HTMLButtonElement | null;
+        if (!btn) return;
+        const id = btn.dataset.prodottoId;
+        if (!id) return;
+        const prodotto = prodotti.find((p: any) => p.id === id);
+        if (prodotto) aggiungiAlCarrello(prodotto, btn);
+      });
     }
   }
 
@@ -153,19 +163,25 @@ import data from "../data/data.json";
     if (idx >= 0) cart[idx].quantita += 1;
     else cart.push({ id: prodotto.id, nome: prodotto.nome, prezzo: Number(prodotto.prezzo), immagine: prodotto.immagine || '/images/placeholder.svg', quantita: 1 });
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    
-    // Feedback visivo immediato e aggiornamento badge
     aggiornaBadgeCarrello();
-    const btn = event?.currentTarget as HTMLButtonElement;
-    if(btn) {
-        const oldText = btn.innerHTML;
-        btn.innerHTML = "✓";
-        btn.style.background = "var(--success)";
-        btn.style.color = "#fff";
-        btn.style.borderColor = "var(--success)";
-        setTimeout(() => { btn.innerHTML = oldText; btn.style.cssText = ""; }, 1000);
-    }
   };
+
+  function aggiungiAlCarrello(prodotto: any, btn?: HTMLButtonElement) {
+    let cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+    const idx = cart.findIndex((i: any) => i.id === prodotto.id);
+    if (idx >= 0) cart[idx].quantita += 1;
+    else cart.push({ id: prodotto.id, nome: prodotto.nome, prezzo: Number(prodotto.prezzo), immagine: prodotto.immagine || '/images/placeholder.svg', quantita: 1 });
+    localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    aggiornaBadgeCarrello();
+    
+    // Feedback visivo
+    if (btn) {
+      const oldText = btn.innerHTML;
+      btn.innerHTML = "✓";
+      btn.style.cssText = "background: var(--status-success)!important; color: #fff!important; border-color: var(--status-success)!important; transform: scale(1.2)!important;";
+      setTimeout(() => { btn.innerHTML = oldText; btn.style.cssText = ""; }, 1000);
+    }
+  }
 
   function aggiornaBadgeCarrello() {
     const cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]");

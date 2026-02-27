@@ -2,14 +2,29 @@
 import AdminLayout from "../../layouts/AdminLayout.astro";
 ---
 
-<AdminLayout title="Gestione Ordini" activeNav="ordini">
-  <div class="admin-header">
-    <h1>Ordini in arrivo</h1>
-    <div class="status-badge">🟢 In ascolto...</div>
+<AdminLayout title="Ordini Live" activeNav="ordini">
+  <div class="ordini-page-header">
+    <div>
+      <h1>Ordini in arrivo</h1>
+      <p>Aggiornamento in tempo reale • Ultimi 50 ordini</p>
+    </div>
+    <div class="header-right">
+      <div class="status-badge">🟢 In ascolto...</div>
+      <select id="filtroStato" class="input" style="max-width:180px; padding: 10px 16px; font-size:0.85rem;">
+        <option value="">Tutti gli stati</option>
+        <option value="in_attesa">⏳ In attesa</option>
+        <option value="confermato">✅ Confermato</option>
+        <option value="in_preparazione">👨‍🍳 In preparazione</option>
+        <option value="pronto">🔔 Pronto</option>
+        <option value="consegnato">✓ Consegnato</option>
+        <option value="annullato">✕ Annullato</option>
+      </select>
+    </div>
   </div>
 
   <div class="ordini-grid" id="ordiniContainer">
-    <div style="text-align:center; padding: 40px; grid-column: 1/-1;">
+    <div style="text-align:center; padding: 60px; grid-column: 1/-1; color: var(--text-muted);">
+      <div class="spinner" style="margin: 0 auto 16px;"></div>
       Caricamento ordini in corso...
     </div>
   </div>
@@ -18,19 +33,63 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
 </AdminLayout>
 
 <style>
-  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
-  .status-badge { background: #2ecc71; color: #111; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.8rem; animation: pulse 2s infinite; }
-  .ordini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
-  :global(.ordine-card) { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-  :global(.ordine-header) { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-  :global(.tavolo-badge) { background: var(--accent); color: #000; padding: 4px 10px; border-radius: 4px; font-weight: 900; font-size: 1.2rem; }
-  :global(.stato-badge) { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
-  :global(.stato-in_attesa) { background: #f39c12; color: #fff; }
-  :global(.stato-ricevuto) { background: #2ecc71; color: #fff; }
-  :global(.items-list) { list-style: none; padding: 0; margin: 0; font-size: 0.95rem; }
-  :global(.items-list li) { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
-  :global(.ordine-footer) { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 12px; font-weight: bold; }
-  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+  .ordini-page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+  .ordini-page-header h1 { font-size: 1.8rem; margin-bottom: 4px; }
+  .ordini-page-header p  { font-size: 0.85rem; color: var(--text-muted); }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .status-badge { background: rgba(16,185,129,0.15); color: var(--status-success); border: 1px solid rgba(16,185,129,0.3); padding: 6px 14px; border-radius: 99px; font-weight: 700; font-size: 0.8rem; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
+  .ordini-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; align-items: start; }
+
+  :global(.ordine-card) { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: var(--radius); padding: 20px; display: flex; flex-direction: column; gap: 14px; position: relative; overflow: hidden; }
+  :global(.ordine-card.stato-in_attesa)       { border-left: 3px solid #f39c12; }
+  :global(.ordine-card.stato-confermato)      { border-left: 3px solid #3498db; }
+  :global(.ordine-card.stato-in_preparazione) { border-left: 3px solid #9b59b6; }
+  :global(.ordine-card.stato-pronto)          { border-left: 3px solid var(--status-success); box-shadow: 0 0 20px rgba(16,185,129,0.12); }
+  :global(.ordine-card.stato-consegnato)      { border-left: 3px solid #7f8c8d; opacity: 0.7; }
+  :global(.ordine-card.stato-annullato)       { border-left: 3px solid var(--status-danger); opacity: 0.5; }
+
+  :global(.ordine-header)     { display: flex; justify-content: space-between; align-items: center; }
+  :global(.tavolo-badge)      { background: var(--accent-primary); color: var(--bg-base); padding: 6px 14px; border-radius: 8px; font-weight: 900; font-size: 1.3rem; font-family: var(--font-serif); line-height: 1; }
+  :global(.ordine-meta)       { font-size: 0.78rem; color: var(--text-muted); text-align: right; line-height: 1.5; }
+
+  :global(.stato-badge)            { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 99px; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  :global(.stato-in_attesa)        { background: rgba(243,156,18,0.15);  color: #f39c12; }
+  :global(.stato-confermato)       { background: rgba(52,152,219,0.15);  color: #3498db; }
+  :global(.stato-in_preparazione)  { background: rgba(155,89,182,0.15);  color: #9b59b6; }
+  :global(.stato-pronto)           { background: rgba(16,185,129,0.15);  color: var(--status-success); }
+  :global(.stato-consegnato)       { background: rgba(127,140,141,0.15); color: #7f8c8d; }
+  :global(.stato-annullato)        { background: rgba(239,68,68,0.15);   color: var(--status-danger); }
+
+  :global(.items-list) { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+  :global(.items-list li) { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed var(--border-subtle); color: var(--text-muted); }
+  :global(.items-list li:last-child) { border-bottom: none; }
+  :global(.item-nome) { color: var(--text-main); font-weight: 500; }
+  :global(.item-qty)  { color: var(--accent-primary); font-weight: 700; margin-right: 8px; }
+
+  :global(.note-box) { background: rgba(243,156,18,0.08); border: 1px solid rgba(243,156,18,0.2); border-radius: 8px; padding: 10px 14px; font-size: 0.85rem; color: #f39c12; }
+  :global(.note-box strong) { display: block; margin-bottom: 2px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  :global(.ordine-footer) { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 12px; font-weight: 700; font-size: 1.1rem; }
+  :global(.metodo-tag) { display: inline-flex; align-items: center; gap: 4px; font-size: 0.75rem; font-weight: 600; background: var(--bg-surface-elevated); border: 1px solid var(--border-light); padding: 3px 8px; border-radius: 99px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  :global(.pagato-badge) { color: var(--status-success); font-size: 0.85rem; font-weight: 700; }
+
+  :global(.azioni-stato) { display: flex; flex-direction: column; gap: 8px; }
+  :global(.azioni-stato-row) { display: flex; gap: 8px; }
+  :global(.btn-stato) { flex: 1; padding: 10px 12px; border: none; border-radius: 8px; font-size: 0.82rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease; font-family: var(--font-sans); }
+  :global(.btn-stato:hover) { transform: translateY(-1px); }
+  :global(.btn-conferma)    { background: rgba(52,152,219,0.15); color: #3498db; border: 1px solid rgba(52,152,219,0.3); }
+  :global(.btn-conferma:hover) { background: #3498db; color: #fff; }
+  :global(.btn-prepara)     { background: rgba(155,89,182,0.15); color: #9b59b6; border: 1px solid rgba(155,89,182,0.3); }
+  :global(.btn-prepara:hover) { background: #9b59b6; color: #fff; }
+  :global(.btn-pronto)      { background: rgba(16,185,129,0.15); color: var(--status-success); border: 1px solid rgba(16,185,129,0.3); }
+  :global(.btn-pronto:hover) { background: var(--status-success); color: #fff; }
+  :global(.btn-consegna)    { background: rgba(127,140,141,0.15); color: #7f8c8d; border: 1px solid rgba(127,140,141,0.3); }
+  :global(.btn-consegna:hover) { background: #7f8c8d; color: #fff; }
+  :global(.btn-annulla)     { background: rgba(239,68,68,0.08); color: var(--status-danger); border: 1px solid rgba(239,68,68,0.2); }
+  :global(.btn-annulla:hover) { background: var(--status-danger); color: #fff; }
+
+  @media (max-width: 768px) { .ordini-grid { grid-template-columns: 1fr; } .ordini-page-header { flex-direction: column; } }
 </style>
 
 <script>
@@ -41,72 +100,131 @@ import AdminLayout from "../../layouts/AdminLayout.astro";
   const { auth, db } = getFirebaseClient();
   const container = document.getElementById("ordiniContainer")!;
   const sound = document.getElementById("notificationSound") as HTMLAudioElement;
-  
-  onAuthStateChanged(auth, (user) => { 
-    if (!user) {
-      window.location.href = "/admin"; 
-    } else {
-      iniziaAscoltoOrdini();
-    }
+  const filtroStato = document.getElementById("filtroStato") as HTMLSelectElement;
+
+  const STATI_LABEL: Record<string, { label: string; icon: string }> = {
+    in_attesa:       { label: "In attesa",        icon: "⏳" },
+    confermato:      { label: "Confermato",        icon: "✅" },
+    in_preparazione: { label: "In preparazione",  icon: "👨‍🍳" },
+    pronto:          { label: "Pronto",            icon: "🔔" },
+    consegnato:      { label: "Consegnato",        icon: "✓"  },
+    annullato:       { label: "Annullato",         icon: "✕"  },
+  };
+
+  // Transizioni di stato valide secondo il workflow
+  const NEXT_STATES: Record<string, { stato: string; label: string; cls: string }[]> = {
+    in_attesa:       [{ stato: "confermato",      label: "✅ Conferma",            cls: "btn-conferma" },
+                      { stato: "annullato",        label: "✕ Annulla",              cls: "btn-annulla"  }],
+    confermato:      [{ stato: "in_preparazione", label: "👨‍🍳 Inizia preparazione", cls: "btn-prepara"  },
+                      { stato: "annullato",        label: "✕ Annulla",              cls: "btn-annulla"  }],
+    in_preparazione: [{ stato: "pronto",           label: "🔔 Segna come pronto",   cls: "btn-pronto"   }],
+    pronto:          [{ stato: "consegnato",       label: "✓ Consegnato",           cls: "btn-consegna" }],
+    consegnato:      [],
+    annullato:       [],
+  };
+
+  let allOrdini: { id: string; ordine: any }[] = [];
+  let filtroAttivoStato = "";
+
+  filtroStato?.addEventListener("change", () => {
+    filtroAttivoStato = filtroStato.value;
+    renderOrdini();
   });
 
+  onAuthStateChanged(auth, (user) => {
+    if (!user) { window.location.href = "/admin"; return; }
+    iniziaAscoltoOrdini();
+  });
+
+  function formatTimestamp(ts: any): string {
+    if (!ts) return "—";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return d.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  }
+
+  function renderOrdini() {
+    const filtered = filtroAttivoStato
+      ? allOrdini.filter(({ ordine }) => ordine.stato === filtroAttivoStato)
+      : allOrdini;
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:60px; grid-column:1/-1; color:var(--text-muted);">${filtroAttivoStato ? "Nessun ordine con questo stato." : "Nessun ordine presente."}</div>`;
+      return;
+    }
+
+    container.innerHTML = "";
+    filtered.forEach(({ id, ordine }) => {
+      const card = document.createElement("div");
+      card.className = `ordine-card stato-${ordine.stato || "in_attesa"}`;
+      card.dataset.id = id;
+
+      const statoInfo = STATI_LABEL[ordine.stato] || { label: ordine.stato, icon: "?" };
+      const nextStates = NEXT_STATES[ordine.stato] || [];
+
+      const itemsHtml = (ordine.items || []).map((i: any) => `
+        <li>
+          <span><span class="item-qty">${i.quantita}×</span><span class="item-nome">${i.nomeProdotto}</span></span>
+          <span>€ ${Number(i.totaleRiga ?? (i.prezzoUnitario * i.quantita) ?? 0).toFixed(2)}</span>
+        </li>
+      `).join("");
+
+      const azioniHtml = nextStates.length > 0 ? `
+        <div class="azioni-stato">
+          <div class="azioni-stato-row">
+            ${nextStates.map(ns => `<button class="btn-stato ${ns.cls}" data-id="${id}" data-stato="${ns.stato}">${ns.label}</button>`).join("")}
+          </div>
+        </div>` : "";
+
+      card.innerHTML = `
+        <div class="ordine-header">
+          <span class="tavolo-badge">T.${ordine.numeroTavolo}</span>
+          <span class="ordine-meta">#${id.slice(-6).toUpperCase()}<br/>${formatTimestamp(ordine.creatoAt)}</span>
+        </div>
+        <div><span class="stato-badge stato-${ordine.stato}">${statoInfo.icon} ${statoInfo.label}</span></div>
+        <ul class="items-list">${itemsHtml}</ul>
+        ${ordine.noteOrdine ? `<div class="note-box"><strong>📝 Note cliente</strong>${ordine.noteOrdine}</div>` : ""}
+        <div class="ordine-footer">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="metodo-tag">${ordine.metodoPagamento === "carta" ? "💳 Carta" : "💵 Cassa"}</span>
+            ${ordine.pagato ? '<span class="pagato-badge">✓ Pagato</span>' : ""}
+          </div>
+          <span>€ ${Number(ordine.totale || 0).toFixed(2)}</span>
+        </div>
+        ${azioniHtml}
+      `;
+
+      container.appendChild(card);
+    });
+
+    // Event delegation per cambio stato
+    container.querySelectorAll(".btn-stato").forEach(btn => {
+      btn.addEventListener("click", async (e) => {
+        const b = e.currentTarget as HTMLButtonElement;
+        const ordineId = b.dataset.id!;
+        const nuovoStato = b.dataset.stato!;
+        const origText = b.textContent;
+        b.disabled = true;
+        b.textContent = "...";
+        try {
+          await updateDoc(doc(db, "ordini", ordineId), { stato: nuovoStato, aggiornatoAt: new Date() });
+        } catch {
+          b.disabled = false;
+          b.textContent = origText;
+        }
+      });
+    });
+  }
+
   function iniziaAscoltoOrdini() {
-    let isFirstLoad = true;
+    let isFirst = true;
     const q = query(collection(db, "ordini"), orderBy("creatoAt", "desc"), limit(50));
-    
     onSnapshot(q, (snapshot) => {
-      if (!isFirstLoad) {
-        snapshot.docChanges().forEach((change) => {
-          if (change.type === "added") sound.play().catch(e => console.log(e));
-        });
+      if (!isFirst) {
+        snapshot.docChanges().forEach(c => { if (c.type === "added") sound?.play().catch(() => {}); });
       }
-      isFirstLoad = false;
-      container.innerHTML = ""; 
-      
-      if (snapshot.empty) {
-        container.innerHTML = `<div style="text-align:center; padding: 40px; grid-column: 1/-1; color: var(--muted);">Nessun ordine presente.</div>`;
-        return;
-      }
-
-      snapshot.docs.forEach((documento) => {
-        const ordine = documento.data();
-        const id = documento.id;
-        const card = document.createElement("div");
-        card.className = "ordine-card";
-        
-        const dataFormat = ordine.creatoAt?.toDate ? ordine.creatoAt.toDate().toLocaleTimeString() : "Ora sconosciuta";
-        const itemsHtml = ordine.items.map((i: any) => `
-          <li><span>${i.quantita}x ${i.nomeProdotto}</span><span>€${i.totaleRiga.toFixed(2)}</span></li>
-        `).join("");
-        
-        card.innerHTML = `
-          <div class="ordine-header">
-            <span class="tavolo-badge">Tavolo ${ordine.numeroTavolo}</span>
-            <span class="stato-badge stato-${ordine.stato}">${ordine.stato === 'in_attesa' ? '⏳ In Attesa' : '✅ Ricevuto'}</span>
-          </div>
-          <div>
-            <small style="color: gray;">Ordine: ${id.slice(-6)} • Ore: ${dataFormat}</small><br/>
-            <small>Metodo: <strong>${(ordine.metodoPagamento || 'cassa').toUpperCase()}</strong> - Pagato: ${ordine.pagato ? 'Sì' : 'No'}</small>
-          </div>
-          <ul class="items-list">${itemsHtml}</ul>
-          ${ordine.noteOrdine ? `<div style="background: rgba(231, 76, 60, 0.2); padding: 8px; border-radius: 4px; font-size:0.85rem;"><strong>Note:</strong> ${ordine.noteOrdine}</div>` : ''}
-          <div class="ordine-footer"><span>Totale:</span><span>€${Number(ordine.totale).toFixed(2)}</span></div>
-          <div style="display: flex; gap: 8px; margin-top: 12px;">
-            ${ordine.stato === 'in_attesa' ? 
-              `<button class="btn btn-primary btn-sm accetta-btn" data-id="${id}" style="flex:1;">Accetta</button>` : 
-              `<button class="btn btn-ghost btn-sm completa-btn" data-id="${id}" style="flex:1;">Completato</button>`
-            }
-          </div>
-        `;
-        container.appendChild(card);
-      });
-
-      document.querySelectorAll('.accetta-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => await updateDoc(doc(db, "ordini", (e.target as any).dataset.id), { stato: "ricevuto" }));
-      });
-      document.querySelectorAll('.completa-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => await updateDoc(doc(db, "ordini", (e.target as any).dataset.id), { stato: "completato" }));
-      });
+      isFirst = false;
+      allOrdini = snapshot.docs.map(d => ({ id: d.id, ordine: d.data() }));
+      renderOrdini();
     });
   }
 </script>

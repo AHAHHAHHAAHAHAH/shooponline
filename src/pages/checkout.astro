@@ -46,6 +46,7 @@ const stripePk = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
         <div class="form-group table-input-group">
           <label class="label" style="color: var(--accent-light); font-size: 1rem;">📍 Numero del tuo tavolo *</label>
           <input type="number" id="inputTavolo" class="input table-input" placeholder="Es. 12" required min="1" />
+          <div id="tavoloError" style="display:none; color: var(--status-danger); font-size: 0.85rem; margin-top: 6px;">⚠️ Inserisci il numero del tuo tavolo prima di procedere.</div>
         </div>
 
         <div id="paymentSection" class="payment-actions">
@@ -197,15 +198,36 @@ const stripePk = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
   renderCart();
 
+  // Reset stile errore al cambio valore tavolo
+  inputTavolo?.addEventListener("input", () => {
+    (inputTavolo as HTMLInputElement).style.borderColor = "";
+    (inputTavolo as HTMLInputElement).style.boxShadow = "";
+    const errMsg = document.getElementById("tavoloError");
+    if (errMsg) errMsg.style.display = "none";
+  });
+
   // PAGAMENTO CASSA
   if(btnCassa) {
     btnCassa.addEventListener("click", async (e) => {
       e.preventDefault();
-      if (!inputTavolo || !inputTavolo.value) { 
-        alert("⚠️ Inserisci il numero del tuo tavolo per continuare!"); 
-        if(inputTavolo) inputTavolo.focus(); 
+      
+      const tavoloVal = inputTavolo ? inputTavolo.value.trim() : "";
+      if (!tavoloVal) { 
+        // Inline validation invece di alert
+        if(inputTavolo) {
+          inputTavolo.style.borderColor = "var(--status-danger)";
+          inputTavolo.style.boxShadow = "0 0 0 4px rgba(239,68,68,0.15)";
+          inputTavolo.focus();
+          inputTavolo.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        const errMsg = document.getElementById("tavoloError");
+        if(errMsg) errMsg.style.display = "block";
         return; 
       }
+      // Reset stile errore
+      if(inputTavolo) { inputTavolo.style.borderColor = ""; inputTavolo.style.boxShadow = ""; }
+      const errMsg = document.getElementById("tavoloError");
+      if(errMsg) errMsg.style.display = "none";
 
       const btn = e.currentTarget;
       const originalText = btn.innerHTML;
@@ -220,22 +242,26 @@ const stripePk = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
           method: "POST", 
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            numeroTavolo: inputTavolo.value,
+            numeroTavolo: tavoloVal,
             items: cart.map(i => ({ prodottoId: i.id, quantita: i.quantita })),
             noteOrdine: noteOrdine
           })
         });
         
         if (res.ok) {
+          const { ordineId } = await res.json();
           localStorage.removeItem(CART_KEY);
-          window.location.replace("/pagamento/successo"); 
+          // Salva tavolo per la pagina di successo
+          sessionStorage.setItem("puborder_tavolo", tavoloVal);
+          const qs = ordineId ? `?ordine=${ordineId}&metodo=cassa` : "?metodo=cassa";
+          window.location.replace("/pagamento/successo" + qs); 
         } else {
           const errorData = await res.json().catch(()=>({}));
-          alert(`❌ Errore del server: ${errorData.error || "Impossibile inviare l'ordine."}`);
+          alert(`❌ Errore: ${errorData.error || "Impossibile inviare l'ordine."}`);
           btn.disabled = false; btn.innerHTML = originalText;
         }
       } catch (err) { 
-        alert("❌ Nessuna connessione a internet o server irraggiungibile."); 
+        alert("❌ Nessuna connessione o server irraggiungibile."); 
         btn.disabled = false; btn.innerHTML = originalText;
       }
     });
@@ -253,12 +279,25 @@ const stripePk = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
     btnStripe.addEventListener("click", async (e) => {
       e.preventDefault();
       
-      if (!stripePk) return alert("⚠️ Pagamenti con carta disabilitati (Manca API Key).");
-      if (!inputTavolo || !inputTavolo.value) { 
-        alert("⚠️ Inserisci il numero del tavolo prima di pagare!"); 
-        if(inputTavolo) inputTavolo.focus(); 
-        return; 
+      if (!stripePk) return alert("⚠️ Pagamenti con carta disabilitati.");
+      
+      const tavoloVal = inputTavolo ? inputTavolo.value.trim() : "";
+      if (!tavoloVal) { 
+        if(inputTavolo) {
+          inputTavolo.style.borderColor = "var(--status-danger)";
+          inputTavolo.style.boxShadow = "0 0 0 4px rgba(239,68,68,0.15)";
+          inputTavolo.focus();
+          inputTavolo.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        const errMsg = document.getElementById("tavoloError");
+        if(errMsg) errMsg.style.display = "block";
+        return;
       }
+      if(inputTavolo) { inputTavolo.style.borderColor = ""; inputTavolo.style.boxShadow = ""; }
+      const errMsg = document.getElementById("tavoloError");
+      if(errMsg) errMsg.style.display = "none";
+      
+      // Nessun salvataggio sessionStorage — il tavolo lo inserisce l'utente manualmente
 
       const btn = e.currentTarget;
       const originalText = btn.innerHTML;
@@ -275,7 +314,7 @@ const stripePk = import.meta.env.PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ 
             ordineData: { 
-              numeroTavolo: inputTavolo.value, 
+              numeroTavolo: tavoloVal, 
               items: cart.map(i => ({prodottoId: i.id, quantita: i.quantita})), 
               noteOrdine: noteOrdine 
             } 

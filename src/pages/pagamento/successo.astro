@@ -43,10 +43,7 @@ const pub = data.pub;
       </div>
 
       <div class="successo-actions">
-        <!-- Il link al tavolo viene costruito lato client via JS -->
-        <a href="#" id="aggiungiAltroBtn" class="btn btn-primary btn-lg">
-          Aggiungi altro
-        </a>
+        <a href="/menu" class="btn btn-primary btn-lg">🍸 Aggiungi altro</a>
         <a href="/" class="btn btn-ghost">Torna alla home</a>
       </div>
     </div>
@@ -114,11 +111,4 @@ const pub = data.pub;
   .successo-actions { display: flex; flex-direction: column; gap: 12px; }
 </style>
 
-<script>
-  // sessionStorage è disponibile SOLO nel browser — mai nel server Astro
-  document.addEventListener("DOMContentLoaded", () => {
-    const tavolo = sessionStorage.getItem("puborder_tavolo") || "1";
-    const btn = document.getElementById("aggiungiAltroBtn") as HTMLAnchorElement;
-    if (btn) btn.href = `/tavolo/${tavolo}`;
-  });
-</script>
+
