@@ -131,13 +131,10 @@ const navItems = [
   </div>
 
   <script>
-    import { getFirebaseClient } from "../lib/firebase-client";
-    import { signOut } from "firebase/auth";
-
-    document.getElementById("logoutBtn")?.addEventListener("click", async () => {
-      const { auth } = getFirebaseClient();
-      await signOut(auth);
-      window.location.href = "/admin";
+    document.getElementById("logoutBtn")?.addEventListener("click", () => {
+      // Con il Basic Auth, il browser ricorda la password finché non viene chiuso.
+      // Cliccando esci, ti riportiamo semplicemente alla pagina del pub (la Home).
+      window.location.href = "/";
     });
   </script>
 </body>
