@@ -5,16 +5,21 @@ import data from "../../data/data.json";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   try {
-    const env = (locals as any).runtime?.env || import.meta.env;
+    // 🔥 RISOLUZIONE BUG COME SOPRA
+    const getEnv = (key: string) => import.meta.env[key] || (locals as any).runtime?.env?.[key];
 
     const firebaseConfig = {
-      apiKey: env.PUBLIC_FIREBASE_API_KEY,
-      authDomain: env.PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: env.PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: env.PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: env.PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: env.PUBLIC_FIREBASE_APP_ID
+      apiKey: getEnv("PUBLIC_FIREBASE_API_KEY"),
+      authDomain: getEnv("PUBLIC_FIREBASE_AUTH_DOMAIN"),
+      projectId: getEnv("PUBLIC_FIREBASE_PROJECT_ID"),
+      storageBucket: getEnv("PUBLIC_FIREBASE_STORAGE_BUCKET"),
+      messagingSenderId: getEnv("PUBLIC_FIREBASE_MESSAGING_SENDER_ID"),
+      appId: getEnv("PUBLIC_FIREBASE_APP_ID")
     };
+
+    if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+      throw new Error("Mancano le chiavi FIREBASE nel server!");
+    }
 
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     const db = getFirestore(app);
@@ -25,7 +30,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (!numeroTavolo || isNaN(Number(numeroTavolo))) return new Response(JSON.stringify({ error: "Numero tavolo mancante." }), { status: 400 });
     if (!items || items.length === 0) return new Response(JSON.stringify({ error: "Carrello vuoto." }), { status: 400 });
 
-    // Leggiamo i prezzi live da Firebase
     const prodottiSnapshot = await getDocs(collection(db, "prodotti"));
     const prodottiDb = prodottiSnapshot.docs.map(d => ({ id: d.id, ...d.data() as any }));
 
@@ -63,8 +67,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     });
 
     return new Response(JSON.stringify({ ordineId: ordineDoc.id }), { status: 200 });
-  } catch (err) {
-    console.error("Errore crea-ordine:", err);
+  } catch (err: any) {
+    console.error("Errore crea-ordine:", err.message);
     return new Response(JSON.stringify({ error: "Errore server." }), { status: 500 });
   }
 };

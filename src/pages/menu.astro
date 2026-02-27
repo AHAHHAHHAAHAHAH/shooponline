@@ -3,62 +3,72 @@ import Layout from "../layouts/Layout.astro";
 import data from "../data/data.json";
 ---
 
-<Layout title={`Menu — ${data.pub.nome}`} description={`Esplora il menu di ${data.pub.nome}`}>
-  <section class="menu-hero">
-    <div class="container menu-hero-inner">
-      <h1 class="reveal-text">Il nostro Menu</h1>
-      <p class="reveal-text delay-1">Scopri le nostre selezioni di drink e food.</p>
+<Layout title={`Menu — ${data.pub.nome}`} description={`Menu digitale di ${data.pub.nome}`}>
+  <div class="menu-sticky-header">
+    <div class="container">
+      <h1 class="menu-page-title">Il nostro Menu</h1>
+      <div class="categoria-scroll-nav" id="categoriaNav">
+        </div>
     </div>
-  </section>
+  </div>
 
-  <div class="container menu-layout">
-    <aside class="menu-sidebar">
-      <div class="menu-sidebar-inner" id="categoriaNav"></div>
-    </aside>
-
+  <div class="container" style="padding-top: 24px; padding-bottom: 100px;">
     <main class="menu-content" id="menuContent">
       <div style="text-align:center; padding: 40px; color: var(--accent);">
-        <span class="spinner" style="border-color: var(--accent) transparent var(--accent) transparent;"></span>
-        <p>Caricamento menu in diretta...</p>
+        <span class="spinner"></span>
+        <p>Caricamento menu...</p>
       </div>
     </main>
   </div>
+
+  <a href="/checkout" class="floating-cart" id="floatingCart" style="display:none;">
+    <span>🛒 Vedi Carrello</span>
+    <div class="cart-badge" id="cartCount">0</div>
+  </a>
 </Layout>
 
 <style>
-  .menu-hero { padding: 80px 24px 40px; text-align: center; border-bottom: 1px solid var(--border); }
-  .menu-hero h1 { font-family: var(--font-display); font-size: clamp(2.5rem, 6vw, 4rem); margin-bottom: 12px; }
-  .menu-layout { display: flex; gap: 48px; padding: 48px 24px 80px; align-items: flex-start; }
-  .menu-sidebar { width: 240px; flex-shrink: 0; position: sticky; top: 100px; }
-  .menu-sidebar-inner { display: flex; flex-direction: column; gap: 8px; }
-  .cat-link { padding: 12px 16px; border-radius: var(--radius-sm); font-weight: 600; color: var(--text-soft); transition: all var(--transition); border: 1px solid transparent; cursor: pointer; display: block; text-decoration: none; }
-  .cat-link:hover { background: rgba(200,146,42,0.08); color: var(--text); }
-  .cat-link.active { background: rgba(200,146,42,0.15); border-color: rgba(200,146,42,0.3); color: var(--accent-light); }
-  .menu-content { flex: 1; }
-  .categoria-section { margin-bottom: 64px; scroll-margin-top: 100px; }
-  .categoria-title { font-family: var(--font-display); font-size: 2rem; color: var(--accent-light); margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
-  .prodotti-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
-  .prodotto-card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; transition: transform var(--transition); display: flex; flex-direction: column; height: 100%; }
-  .prodotto-card:hover { transform: translateY(-4px); border-color: rgba(200,146,42,0.4); }
-  .prodotto-img-wrap { position: relative; height: 200px; overflow: hidden; }
-  .prodotto-img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-  .prodotto-card:hover .prodotto-img { transform: scale(1.05); }
-  .prodotto-info { padding: 20px; display: flex; flex-direction: column; flex: 1; }
-  .prodotto-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 12px; }
-  .prodotto-nome { font-size: 1.1rem; font-weight: 700; margin: 0; }
-  .prodotto-prezzo { font-family: var(--font-display); font-weight: 700; color: var(--accent-light); font-size: 1.1rem; }
-  .prodotto-desc { font-size: 0.9rem; color: var(--text-soft); margin-bottom: 16px; line-height: 1.5; flex: 1; }
-  .prodotto-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
-  .badge { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--muted); }
-  .badge-alcol { background: rgba(231, 76, 60, 0.1); color: #e74c3c; border-color: rgba(231, 76, 60, 0.2); }
-  .add-to-cart-btn { width: 100%; background: var(--bg); border: 1px solid var(--accent); color: var(--accent); padding: 10px; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; transition: all var(--transition); }
-  .add-to-cart-btn:hover { background: var(--accent); color: #000; }
-  @media (max-width: 768px) {
-    .menu-layout { flex-direction: column; gap: 32px; padding-top: 24px; }
-    .menu-sidebar { width: 100%; position: static; }
-    .menu-sidebar-inner { flex-direction: row; overflow-x: auto; padding-bottom: 12px; white-space: nowrap; scrollbar-width: none; }
-    .cat-link { flex: 0 0 auto; }
+  .menu-sticky-header {
+    position: sticky;
+    top: 0;
+    background: rgba(7, 7, 9, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    border-bottom: 1px solid var(--border);
+    padding: 16px 0;
   }
+  .menu-page-title {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    margin-bottom: 12px;
+  }
+  .categoria-scroll-nav {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    padding-bottom: 8px;
+    scrollbar-width: none; /* Nasconde scrollbar su Firefox */
+  }
+  .categoria-scroll-nav::-webkit-scrollbar { display: none; } /* Nasconde scrollbar su Chrome */
+  
+  :global(.cat-pill) {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 99px;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-soft);
+    transition: all 0.2s ease;
+  }
+  :global(.cat-pill.active) {
+    background: var(--accent);
+    color: #000;
+    border-color: var(--accent);
+  }
+  .categoria-section { margin-bottom: 48px; scroll-margin-top: 140px; }
+  .categoria-title { font-family: var(--font-display); font-size: 1.6rem; color: var(--accent-light); margin-bottom: 16px; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px; }
 </style>
 
 <script>
@@ -75,14 +85,12 @@ import data from "../data/data.json";
     let catLoaded = false;
     let prodLoaded = false;
 
-    // Ascolto in tempo reale delle categorie
     onSnapshot(query(collection(db, "categorie"), orderBy("ordinamento", "asc")), (snap) => {
       categorie = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       catLoaded = true;
       if (prodLoaded) renderMenu();
     });
 
-    // Ascolto in tempo reale dei prodotti
     onSnapshot(collection(db, "prodotti"), (snap) => {
       prodotti = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       prodLoaded = true;
@@ -93,8 +101,7 @@ import data from "../data/data.json";
       const prodottiAttivi = prodotti.filter((p: any) => p.disponibile !== false);
 
       if (categorie.length === 0 || prodottiAttivi.length === 0) {
-        contentEl!.innerHTML = `<div style="text-align:center; padding:40px; color: var(--muted);">Il menu è vuoto o in aggiornamento.</div>`;
-        navEl!.innerHTML = "";
+        contentEl!.innerHTML = `<div style="text-align:center; color: var(--muted);">Menu in aggiornamento.</div>`;
         return;
       }
 
@@ -105,30 +112,26 @@ import data from "../data/data.json";
         const prodottiCat = prodottiAttivi.filter((p: any) => p.categoriaId === cat.id);
         if (prodottiCat.length === 0) return;
 
-        htmlNav += `<a href="#cat-${cat.id}" class="cat-link ${index === 0 ? 'active' : ''}">${cat.emoji || ''} ${cat.nome}</a>`;
+        htmlNav += `<a href="#cat-${cat.id}" class="cat-pill ${index === 0 ? 'active' : ''}">${cat.emoji || ''} ${cat.nome}</a>`;
 
         htmlContent += `
           <div class="categoria-section" id="cat-${cat.id}">
-            <h2 class="categoria-title">${cat.emoji || ''} ${cat.nome}</h2>
-            <div class="prodotti-grid">
+            <h2 class="categoria-title">${cat.nome}</h2>
+            <div class="menu-compact-grid">
               ${prodottiCat.map((p: any) => `
-                <div class="prodotto-card">
-                  <div class="prodotto-img-wrap">
-                    <img class="prodotto-img" src="${p.immagine || '/images/placeholder.svg'}" alt="${p.nome}" loading="lazy" onerror="this.src='/images/placeholder.svg'" />
+                <div class="prodotto-row">
+                  <div class="prodotto-thumb-wrap">
+                    <img src="${p.immagine || '/images/placeholder.svg'}" onerror="this.src='/images/placeholder.svg'" />
                   </div>
-                  <div class="prodotto-info">
-                    <div class="prodotto-header">
-                      <h3 class="prodotto-nome">${p.nome}</h3>
-                      <span class="prodotto-prezzo">€ ${Number(p.prezzo).toFixed(2).replace('.', ',')}</span>
+                  <div class="prodotto-row-info">
+                    <div class="prodotto-row-header">
+                      <div class="prodotto-row-title">${p.nome}</div>
                     </div>
-                    <p class="prodotto-desc">${p.descrizione || ''}</p>
-                    <div class="prodotto-meta">
-                      ${p.alcolico ? `<span class="badge badge-alcol">Alcolico ${p.gradazione ? p.gradazione : ''}</span>` : ''}
-                      ${p.allergeni && p.allergeni.length ? `<span class="badge" title="Allergeni">⚠️ ${p.allergeni.join(', ')}</span>` : ''}
+                    <div class="prodotto-row-desc">${p.descrizione || ''}</div>
+                    <div class="prodotto-row-footer">
+                      <div class="prodotto-row-price">€ ${Number(p.prezzo).toFixed(2).replace('.', ',')}</div>
+                      <button class="add-btn" onclick='aggiungiAlCarrello(${JSON.stringify(p).replace(/'/g, "&#39;")})'>+</button>
                     </div>
-                    <button class="add-to-cart-btn" onclick='aggiungiAlCarrello(${JSON.stringify(p).replace(/'/g, "&#39;")})'>
-                      Aggiungi al carrello
-                    </button>
                   </div>
                 </div>
               `).join('')}
@@ -139,6 +142,7 @@ import data from "../data/data.json";
 
       navEl!.innerHTML = htmlNav;
       contentEl!.innerHTML = htmlContent;
+      aggiornaBadgeCarrello();
     }
   }
 
@@ -149,6 +153,46 @@ import data from "../data/data.json";
     if (idx >= 0) cart[idx].quantita += 1;
     else cart.push({ id: prodotto.id, nome: prodotto.nome, prezzo: Number(prodotto.prezzo), immagine: prodotto.immagine || '/images/placeholder.svg', quantita: 1 });
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    alert(`✅ ${prodotto.nome} aggiunto al carrello!`);
+    
+    // Feedback visivo immediato e aggiornamento badge
+    aggiornaBadgeCarrello();
+    const btn = event?.currentTarget as HTMLButtonElement;
+    if(btn) {
+        const oldText = btn.innerHTML;
+        btn.innerHTML = "✓";
+        btn.style.background = "var(--success)";
+        btn.style.color = "#fff";
+        btn.style.borderColor = "var(--success)";
+        setTimeout(() => { btn.innerHTML = oldText; btn.style.cssText = ""; }, 1000);
+    }
   };
+
+  function aggiornaBadgeCarrello() {
+    const cart = JSON.parse(localStorage.getItem(CART_KEY) || "[]");
+    const count = cart.reduce((acc: number, item: any) => acc + item.quantita, 0);
+    const cartBtn = document.getElementById("floatingCart");
+    const badge = document.getElementById("cartCount");
+    if (cartBtn && badge) {
+      if (count > 0) {
+        cartBtn.style.display = "flex";
+        badge.textContent = count.toString();
+      } else {
+        cartBtn.style.display = "none";
+      }
+    }
+  }
+
+  // Interattività pills navigazione
+  document.addEventListener("scroll", () => {
+      const sections = document.querySelectorAll(".categoria-section");
+      const pills = document.querySelectorAll(".cat-pill");
+      let currentId = "";
+      sections.forEach((sec: any) => {
+          if (window.scrollY >= (sec.offsetTop - 150)) currentId = sec.getAttribute("id");
+      });
+      pills.forEach(pill => {
+          pill.classList.remove("active");
+          if (pill.getAttribute("href") === `#${currentId}`) pill.classList.add("active");
+      });
+  });
 </script>

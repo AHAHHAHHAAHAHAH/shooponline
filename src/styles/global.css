@@ -1,373 +1,519 @@
-/* ══════════════════════════════════════════════
-   GLOBAL CSS — The Dark Horse Pub
-   Tema: Luxury Dark / Whisky Bar / Premium
-   Font: Playfair Display (display) + DM Sans (body)
-   ══════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,500&display=swap');
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-
-/* ── RESET ────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
-img, video { max-width: 100%; display: block; }
-a { color: inherit; text-decoration: none; }
-button { cursor: pointer; border: none; background: none; font-family: inherit; }
-input, textarea, select { font-family: inherit; }
-
-/* ── VARIABILI ────────────────────────────── */
+/* ==========================================================================
+   1. ROOT VARIABLES - IL CUORE DEL LUSSO
+   ========================================================================== */
 :root {
-  --bg: #0a0800;
-  --panel: #13100a;
-  --panel2: #1a1610;
-  --border: rgba(200, 146, 42, 0.15);
-  --border-hover: rgba(200, 146, 42, 0.4);
-  --accent: #c8922a;
-  --accent-light: #e8b84b;
-  --accent-glow: rgba(200, 146, 42, 0.2);
-  --text: #f5efe0;
-  --text-soft: #c4b89a;
-  --muted: #8a7a60;
-  --danger: #c0392b;
-  --danger-bg: rgba(192, 57, 43, 0.1);
-  --success: #27ae60;
-  --success-bg: rgba(39, 174, 96, 0.1);
-  --radius-sm: 8px;
-  --radius: 16px;
-  --radius-lg: 24px;
-  --shadow: 0 8px 32px rgba(0,0,0,0.5);
-  --shadow-accent: 0 8px 32px rgba(200, 146, 42, 0.2);
-  --max-width: 1200px;
-  --font-display: 'Playfair Display', Georgia, serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
-  --transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Palette Colori: OLED Black & Liquid Gold */
+  --bg-base: #030305;
+  --bg-surface: #0a0a0e;
+  --bg-surface-elevated: #121218;
+  
+  --accent-primary: #d4af37; /* Oro classico */
+  --accent-light: #f3e5ab;
+  --accent-dark: #aa8529;
+  --accent-glow: rgba(212, 175, 55, 0.25);
+  --accent-glow-strong: rgba(212, 175, 55, 0.5);
+
+  --text-main: #ffffff;
+  --text-muted: #a1a1aa;
+  --text-faint: #52525b;
+
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-gold: rgba(212, 175, 55, 0.3);
+
+  --status-success: #10b981;
+  --status-danger: #ef4444;
+
+  /* Tipografia */
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
+
+  /* Curve di animazione ipnotiche (Smooth & Luxurious) */
+  --ease-fluid: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-slow: cubic-bezier(0.16, 1, 0.3, 1);
+  
+  --transition-fast: 0.2s var(--ease-fluid);
+  --transition-med: 0.4s var(--ease-fluid);
+  --transition-slow: 0.8s var(--ease-slow);
+
+  /* Ombre (Drop Shadows pazzesche) */
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.6);
+  --shadow-lg: 0 20px 40px rgba(0,0,0,0.8);
+  --shadow-gold: 0 8px 32px var(--accent-glow);
 }
 
-/* ── BASE ─────────────────────────────────── */
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-body);
+/* ==========================================================================
+   2. RESET GLOBALE (Addio pagina bianca e link blu)
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
   font-size: 16px;
+  background-color: var(--bg-base);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-base);
+  color: var(--text-main);
   line-height: 1.6;
-  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  position: relative;
 }
 
-/* Texture di sfondo */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image:
-    radial-gradient(ellipse at 20% 50%, rgba(200, 146, 42, 0.04) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 20%, rgba(200, 146, 42, 0.03) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition-fast);
 }
 
-/* ── TIPOGRAFIA ───────────────────────────── */
-h1, h2, h3, h4, h5 {
-  font-family: var(--font-display);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
+ul, ol {
+  list-style: none;
 }
-h1 { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 700; }
-h2 { font-size: clamp(1.8rem, 4vw, 3rem); font-weight: 600; }
-h3 { font-size: clamp(1.3rem, 3vw, 2rem); font-weight: 600; }
-h4 { font-size: 1.2rem; font-weight: 600; }
-p { color: var(--text-soft); line-height: 1.7; }
 
-/* ── LAYOUT ───────────────────────────────── */
+button, input, textarea, select {
+  font-family: inherit;
+  border: none;
+  outline: none;
+  background: none;
+}
+
+::selection {
+  background: var(--accent-primary);
+  color: #000;
+}
+
+/* ==========================================================================
+   3. STRUTTURA E CONTENITORI
+   ========================================================================== */
 .container {
   width: 100%;
-  max-width: var(--max-width);
+  max-width: 1200px;
   margin: 0 auto;
   padding: 0 24px;
 }
-.section { padding: 80px 0; position: relative; z-index: 1; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
 
-/* ── COMPONENTI BASE ─────────────────────── */
-
-/* Card */
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transition: border-color var(--transition), box-shadow var(--transition);
+/* ==========================================================================
+   4. SFONDI IPNOTICI & GLASSMORPHISM
+   ========================================================================== */
+/* Effetto vetro smerigliato */
+.glass {
+  background: rgba(10, 10, 14, 0.65);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-md);
 }
-.card:hover { border-color: var(--border-hover); }
-.card-glow:hover { box-shadow: var(--shadow-accent); }
 
-/* Bottoni */
+/* Bolle di luce ambientali fluttuanti */
+.ambient-bg {
+  position: fixed;
+  top: 0; left: 0; width: 100vw; height: 100vh;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ambient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.4;
+  animation: floatOrb 20s infinite alternate var(--ease-fluid);
+}
+.ambient-orb-1 {
+  top: -10%; left: -10%;
+  width: 50vw; height: 50vw;
+  background: radial-gradient(circle, rgba(212,175,55,0.15) 0%, rgba(0,0,0,0) 70%);
+}
+.ambient-orb-2 {
+  bottom: -20%; right: -10%;
+  width: 60vw; height: 60vw;
+  background: radial-gradient(circle, rgba(212,175,55,0.1) 0%, rgba(0,0,0,0) 70%);
+  animation-duration: 25s;
+  animation-direction: alternate-reverse;
+}
+
+@keyframes floatOrb {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(5vw, 5vh) scale(1.1); }
+  100% { transform: translate(-2vw, -5vh) scale(0.95); }
+}
+
+/* ==========================================================================
+   5. TIPOGRAFIA DI LUSSO
+   ========================================================================== */
+.title-display {
+  font-family: var(--font-serif);
+  font-weight: 700;
+  line-height: 1.1;
+  background: linear-gradient(135deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.title-gold {
+  background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent-dark) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.kicker {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--accent-primary);
+  margin-bottom: 16px;
+  position: relative;
+}
+.kicker::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: calc(100% + 12px);
+  width: 40px; height: 1px;
+  background: var(--accent-primary);
+  transform: translateY(-50%);
+}
+
+/* ==========================================================================
+   6. BOTTONI E INTERAZIONI MAGNETICHE
+   ========================================================================== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 12px 28px;
+  gap: 12px;
+  padding: 16px 36px;
   border-radius: 99px;
   font-weight: 600;
   font-size: 0.95rem;
-  transition: all var(--transition);
-  white-space: nowrap;
-}
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg);
-}
-.btn-primary:hover {
-  background: var(--accent-light);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(200, 146, 42, 0.4);
-}
-.btn-ghost {
-  background: transparent;
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.btn-ghost:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.btn-danger {
-  background: var(--danger);
-  color: #fff;
-}
-.btn-danger:hover { opacity: 0.85; }
-.btn-sm { padding: 8px 18px; font-size: 0.85rem; }
-.btn-lg { padding: 18px 40px; font-size: 1.1rem; }
-.btn:disabled { opacity: 0.4; pointer-events: none; }
-
-/* Badge */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 12px;
-  border-radius: 99px;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-.badge-accent { background: rgba(200, 146, 42, 0.15); color: var(--accent); border: 1px solid rgba(200, 146, 42, 0.3); }
-.badge-success { background: var(--success-bg); color: var(--success); }
-.badge-danger { background: var(--danger-bg); color: var(--danger); }
-
-/* Input */
-.input {
-  width: 100%;
-  padding: 14px 18px;
-  background: rgba(0,0,0,0.3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  font-family: var(--font-body);
-  font-size: 1rem;
-  transition: border-color var(--transition);
-}
-.input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(200, 146, 42, 0.15);
-}
-.input::placeholder { color: var(--muted); }
-.label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
-  margin-bottom: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-med);
+  z-index: 1;
 }
 
-/* Divider */
-.divider {
-  height: 1px;
-  background: var(--border);
-  margin: 24px 0;
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-dark) 100%);
+  color: var(--bg-base);
+  box-shadow: 0 10px 30px var(--accent-glow);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.btn-primary::before {
+  content: '';
+  position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  transition: left 0.6s ease;
+  z-index: -1;
+}
+.btn-primary:hover {
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 15px 40px var(--accent-glow-strong);
+}
+.btn-primary:hover::before { left: 100%; }
+.btn-primary:active { transform: translateY(0) scale(0.98); }
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  backdrop-filter: blur(10px);
+}
+.btn-ghost:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: rgba(212, 175, 55, 0.05);
+  box-shadow: 0 0 20px var(--accent-glow);
 }
 
-/* Kicker */
-.kicker {
-  display: inline-block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.15em;
-  color: var(--accent);
-  margin-bottom: 16px;
-}
+.btn-sm { padding: 10px 24px; font-size: 0.8rem; }
+.btn-lg { padding: 20px 48px; font-size: 1rem; }
 
-/* ── PREZZO ───────────────────────────────── */
-.price {
-  font-family: var(--font-display);
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: var(--accent-light);
-}
-
-/* ── SCROLLBAR ───────────────────────────── */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-
-/* ── ANIMAZIONI ───────────────────────────── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-
-.animate-fade-up { animation: fadeUp 0.6s ease forwards; }
-.animate-fade-in { animation: fadeIn 0.4s ease forwards; }
-.animate-pulse { animation: pulse 2s infinite; }
-
-/* ── CARRELLO MOBILE STICKY ───────────────── */
-.cart-fab {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 100;
-  min-width: 200px;
-  animation: slideUp 0.4s ease;
-}
-
-/* ── LOADER ───────────────────────────────── */
-.spinner {
-  width: 20px;
-  height: 20px;
-  border: 2px solid rgba(255,255,255,0.2);
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  display: inline-block;
-}
-
-/* ── TOAST / NOTIFICA ─────────────────────── */
-.toast {
-  position: fixed;
-  bottom: 100px;
-  right: 24px;
-  z-index: 9999;
-  padding: 14px 20px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.9rem;
-  animation: fadeUp 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  max-width: 320px;
-  box-shadow: var(--shadow);
-}
-.toast-success { background: var(--success); color: #fff; }
-.toast-error { background: var(--danger); color: #fff; }
-.toast-info { background: var(--panel); border: 1px solid var(--border); color: var(--text); }
-
-/* ── RESPONSIVE ───────────────────────────── */
-@media (max-width: 1024px) {
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 768px) {
-  .section { padding: 60px 0; }
-  .grid-2 { grid-template-columns: 1fr; }
-  .grid-3 { grid-template-columns: 1fr; }
-  .grid-4 { grid-template-columns: repeat(2, 1fr); }
-  .hide-mobile { display: none !important; }
-}
-@media (max-width: 480px) {
-  .container { padding: 0 16px; }
-  .grid-4 { grid-template-columns: 1fr 1fr; gap: 12px; }
-}
-
-/* ── ADMIN SPECIFIC ───────────────────────── */
-.admin-sidebar {
-  width: 260px;
-  flex-shrink: 0;
-  background: var(--panel);
-  border-right: 1px solid var(--border);
-  min-height: 100vh;
-}
-.admin-content {
-  flex: 1;
-  padding: 32px;
-  overflow-y: auto;
-}
-.admin-layout {
-  display: flex;
-  min-height: 100vh;
-}
-.stat-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 24px;
+/* ==========================================================================
+   7. LISTA MENU COMPATTA (STILE GLOVO/DELIVEROO MA DI LUSSO)
+   ========================================================================== */
+.menu-compact-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
-.stat-number {
-  font-family: var(--font-display);
-  font-size: 2.5rem;
-  font-weight: 700;
-  color: var(--accent-light);
-  line-height: 1;
+
+.prodotto-row {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 12px;
+  gap: 16px;
+  transition: all var(--transition-med);
+  position: relative;
+  overflow: hidden;
 }
-.stat-label {
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
+
+/* Effetto Hover della card (Ombra e Bordo che si illuminano) */
+.prodotto-row:hover {
+  background: var(--bg-surface-elevated);
+  border-color: var(--border-gold);
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Immagine con zoom ipnotico */
+.prodotto-thumb-wrap {
+  flex-shrink: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-base);
+}
+.prodotto-thumb-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.7s var(--ease-fluid);
+}
+.prodotto-row:hover .prodotto-thumb-wrap img {
+  transform: scale(1.12);
+}
+
+.prodotto-row-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 8px;
+}
+
+.prodotto-row-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
   font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.2;
+  margin-bottom: 6px;
+  transition: color var(--transition-fast);
+}
+.prodotto-row:hover .prodotto-row-title {
+  color: var(--accent-light);
 }
 
-/* Stato ordini colori */
-.stato-in_attesa { color: #f39c12; background: rgba(243,156,18,0.1); }
-.stato-confermato { color: #3498db; background: rgba(52,152,219,0.1); }
-.stato-in_preparazione { color: #9b59b6; background: rgba(155,89,182,0.1); }
-.stato-pronto { color: #27ae60; background: rgba(39,174,96,0.1); }
-.stato-consegnato { color: #7f8c8d; background: rgba(127,140,141,0.1); }
-.stato-annullato { color: #e74c3c; background: rgba(231,76,60,0.1); }
+.prodotto-row-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
+.prodotto-row-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+}
+
+.prodotto-row-price {
+  font-weight: 700;
+  color: var(--accent-primary);
+  font-size: 1.1rem;
+  letter-spacing: 0.05em;
+}
+
+/* Bottone Aggiungi + */
+.add-btn {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-main);
+  border: 1px solid var(--border-light);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all var(--ease-bounce) 0.4s;
+}
+.prodotto-row:hover .add-btn {
+  background: var(--accent-primary);
+  color: var(--bg-base);
+  border-color: var(--accent-primary);
+  transform: rotate(90deg);
+}
+.add-btn:active {
+  transform: scale(0.8) !important;
+}
+
+/* ==========================================================================
+   8. COMPONENTI FLUTTUANTI (CARRELLO)
+   ========================================================================== */
+.floating-cart {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-dark));
+  color: var(--bg-base);
+  padding: 16px 28px;
+  border-radius: 99px;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-gold);
+  z-index: 1000;
+  cursor: pointer;
+  transition: all var(--ease-bounce) 0.5s;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+.floating-cart:hover {
+  transform: translateY(-8px) scale(1.05);
+  box-shadow: 0 20px 40px var(--accent-glow-strong);
+}
+.cart-badge {
+  background: var(--bg-base);
+  color: var(--accent-primary);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+/* ==========================================================================
+   9. INPUTS, FORM E PANNELLO ADMIN
+   ========================================================================== */
+.input {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-light);
+  color: var(--text-main);
+  padding: 16px 20px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  transition: all var(--transition-med);
+}
+.input:focus {
+  background: rgba(0, 0, 0, 0.8);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+.input::placeholder { color: var(--text-faint); }
+
+.label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Gestione Tabelle Admin belle e scure */
 .table-admin {
   width: 100%;
   border-collapse: collapse;
+  text-align: left;
+  background: var(--bg-surface);
+  border-radius: 12px;
+  overflow: hidden;
 }
 .table-admin th {
-  text-align: left;
-  padding: 12px 16px;
-  font-size: 0.75rem;
+  background: var(--bg-surface-elevated);
+  padding: 16px;
+  font-size: 0.85rem;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--muted);
-  font-weight: 600;
-  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-light);
 }
 .table-admin td {
   padding: 16px;
-  border-bottom: 1px solid rgba(200, 146, 42, 0.06);
-  font-size: 0.95rem;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
 }
 .table-admin tr:hover td {
-  background: rgba(200, 146, 42, 0.03);
+  background: rgba(255,255,255,0.02);
+}
+
+/* Toggle Switch per Admin */
+.toggle-switch { position: relative; width: 44px; height: 24px; display: inline-block; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: var(--bg-surface-elevated); border: 1px solid var(--border-light); border-radius: 24px; cursor: pointer; transition: 0.4s; }
+.toggle-slider::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: var(--text-muted); border-radius: 50%; transition: 0.4s var(--ease-bounce); }
+.toggle-switch input:checked + .toggle-slider { background: var(--status-success); border-color: var(--status-success); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); background: #fff; }
+
+/* ==========================================================================
+   10. ANIMAZIONI DI ENTRATA E LOADING (SMOOTH & HYPNOTIC)
+   ========================================================================== */
+.spinner {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(212, 175, 55, 0.2);
+  border-radius: 50%;
+  border-top-color: var(--accent-primary);
+  animation: spin 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sistema di scroll-reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 1s var(--ease-fluid);
+}
+.reveal.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+.delay-1 { transition-delay: 0.1s; }
+.delay-2 { transition-delay: 0.2s; }
+.delay-3 { transition-delay: 0.3s; }
+.delay-4 { transition-delay: 0.4s; }
+
+/* ==========================================================================
+   11. RESPONSIVE DESIGN GLOBALE
+   ========================================================================== */
+@media (max-width: 768px) {
+  .container { padding: 0 16px; }
+  .floating-cart {
+    bottom: 20px; right: 20px; left: 20px;
+    justify-content: space-between;
+    padding: 16px 24px;
+  }
+  .prodotto-thumb-wrap { width: 80px; height: 80px; }
+  .prodotto-row-title { font-size: 1.1rem; }
+  .btn-lg { padding: 16px 24px; font-size: 0.9rem; width: 100%; }
 }

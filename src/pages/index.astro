@@ -3,134 +3,254 @@ import Layout from "../layouts/Layout.astro";
 import data from "../data/data.json";
 
 const pub = data.pub;
-// TUTTO È GESTITO DA FIREBASE IN TEMPO REALE
 ---
 
 <Layout>
   <section class="hero">
-    <div class="hero-bg"><div class="hero-overlay"></div></div>
-    <nav class="nav container">
-      <a href="/" class="nav-logo"><span class="logo-text">{pub.nome}</span></a>
-      <div class="nav-actions">
-        <a href="/menu" class="btn btn-ghost btn-sm">Menu</a>
-        <a href="/tavolo/1" class="btn btn-primary btn-sm">Ordina ora</a>
-      </div>
-    </nav>
+    <div class="hero-bg">
+      <div class="glow-orb orb-1"></div>
+      <div class="glow-orb orb-2"></div>
+      <div class="hero-overlay"></div>
+    </div>
+
+    <header class="header glass">
+      <nav class="nav container">
+        <a href="/" class="nav-logo">
+          <span class="logo-text">{pub.nome}</span>
+        </a>
+        <div class="nav-actions">
+          <a href="/menu" class="btn btn-ghost btn-sm">Esplora Menu</a>
+          <a href="/menu" class="btn btn-primary btn-sm">Ordina dal Tavolo</a>
+        </div>
+      </nav>
+    </header>
+    
     <div class="hero-content container">
-      <div class="hero-badge"><span class="badge badge-accent">Ordina dal tavolo via QR</span></div>
-      <h1 class="hero-title">{pub.nome}</h1>
-      <p class="hero-tagline">{pub.tagline}</p>
-      <p class="hero-desc">{pub.descrizione}</p>
-      <div class="hero-actions">
-        <a href="/menu" class="btn btn-primary btn-lg">Sfoglia il menu</a>
+      <div class="hero-badge reveal">
+        <span class="badge-dot"></span>
+        <span>Servizio al tavolo attivo</span>
+      </div>
+      <h1 class="hero-title reveal delay-1">{pub.nome}</h1>
+      <p class="hero-tagline reveal delay-2">L'arte del buon bere, senza interruzioni.</p>
+      <p class="hero-desc reveal delay-3">
+        Siediti, scansiona il QR code e ordina. Nessuna attesa, nessun cameriere da chiamare. Prepareremo tutto e te lo porteremo direttamente al tavolo.
+      </p>
+      <div class="hero-actions reveal delay-4">
+        <a href="/menu" class="btn btn-primary btn-lg">
+          Inizia l'esperienza
+        </a>
+        <a href="/menu" class="btn btn-ghost btn-lg">Sfoglia il Menu</a>
       </div>
     </div>
   </section>
 
-  <section class="section" id="evidenza">
+  <section class="section">
     <div class="container">
-      <div class="section-header">
-        <span class="kicker">Le nostre proposte</span>
-        <h2>I preferiti del pub</h2>
+      <div class="section-header reveal">
+        <span class="kicker">Frictionless Experience</span>
+        <h2>Il tuo ordine in 3 secondi</h2>
+        <p>Abbiamo eliminato ogni ostacolo tra te e il tuo drink preferito.</p>
+      </div>
+      <div class="steps-grid">
+        {[
+          { icon: "📱", titolo: "Scansiona", desc: "Usa la fotocamera sul QR del tavolo." },
+          { icon: "🍸", titolo: "Scegli", desc: "Esplora le nostre eccellenze live." },
+          { icon: "💳", titolo: "Paga", desc: "Apple Pay, Google Pay o in Cassa." },
+          { icon: "✨", titolo: "Goditi", desc: "Arriviamo noi da te, rilassati." },
+        ].map((step, i) => (
+          <div class={`step-card card reveal delay-${i}`}>
+            <div class="step-icon glass">{step.icon}</div>
+            <h4>{step.titolo}</h4>
+            <p>{step.desc}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="section section-dark" id="evidenza">
+    <div class="container">
+      <div class="section-header reveal">
+        <span class="kicker">Le Signature</span>
+        <h2>I Preferiti del Pub</h2>
       </div>
       
       <div class="prodotti-grid" id="evidenzaContainer">
         <div style="text-align:center; padding: 40px; grid-column: 1/-1; color: var(--muted);">
-          <span class="spinner" style="border-color: var(--accent) transparent var(--accent) transparent;"></span>
+          <span class="spinner"></span> Caricamento eccellenze...
+        </div>
+      </div>
+      
+      <div style="text-align:center; margin-top: 48px;" class="reveal">
+         <a href="/menu" class="btn btn-ghost btn-lg">Scopri l'intero Menu</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="info">
+    <div class="container">
+      <div class="info-grid glass reveal">
+        <div class="info-block">
+          <span class="kicker">Atmosfera unica</span>
+          <h2 style="font-family: var(--font-display); font-size: 2.5rem; margin-bottom:20px;">Vieni a trovarci</h2>
+          <p style="color:var(--text-soft); margin-bottom: 30px; font-size:1.1rem;">
+            {pub.indirizzo}
+          </p>
+          <div class="contatti-list">
+            <a href={`https://wa.me/${pub.whatsapp.replace(/\D/g,'')}`} target="_blank" class="btn btn-ghost">💬 WhatsApp</a>
+            <a href={`https://instagram.com/${pub.social.instagram}`} target="_blank" class="btn btn-ghost">📸 Instagram</a>
+          </div>
+        </div>
+        <div class="info-block orari-block">
+          <h3 style="margin-bottom: 24px; font-family: var(--font-display); font-size: 1.8rem;">Orari</h3>
+          <ul class="orari-list">
+            {pub.orari.map(o => (
+              <li>
+                <span class="giorno">{o.giorni}</span>
+                <span class="ore">{o.apertura} - {o.chiusura}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section section-dark">
-    <div class="container">
-      <div class="section-header">
-        <span class="kicker">Il nostro menu</span>
-        <h2>Ogni voglia, una categoria</h2>
-      </div>
-      <div class="categorie-grid" id="categorieHomeContainer">
-         <div style="text-align:center; padding: 20px; color: var(--muted); grid-column: 1/-1;">Caricamento categorie...</div>
-      </div>
-    </div>
-  </section>
-
   <footer class="footer">
-    <div class="container">
-      <div class="footer-content">
-        <div><div class="footer-logo">{pub.nome}</div></div>
+    <div class="container footer-inner">
+      <div class="footer-brand">
+        <span class="logo-text">{pub.nome}</span>
+        <p class="footer-tagline">Eccellenza servita al tavolo.</p>
+      </div>
+      <div class="footer-legal">
+        <p>P.IVA {pub.partitaIva}</p>
+        <p>&copy; {new Date().getFullYear()} {pub.nome}. Tutti i diritti riservati.</p>
       </div>
     </div>
   </footer>
 </Layout>
 
 <style>
-  /* MANTENI ESATTAMENTE TUTTO IL TUO CSS ATTUALE DI INDEX.ASTRO. NON TOCCARLO. */
-  .hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-  .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 50%, rgba(200,146,42,0.08) 0%, transparent 60%), radial-gradient(ellipse at 70% 30%, rgba(200,146,42,0.05) 0%, transparent 50%); }
-  .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 60%, var(--bg) 100%); }
-  .nav { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding-top: 24px; padding-bottom: 24px; }
-  .nav-logo { display: flex; align-items: center; gap: 12px; }
-  .logo-text { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--accent-light); }
-  .nav-actions { display: flex; gap: 12px; }
-  .hero-content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 80px 24px; position: relative; z-index: 5; }
-  .hero-badge { margin-bottom: 24px; }
-  .hero-title { font-size: clamp(3rem, 8vw, 7rem); font-weight: 900; color: var(--text); line-height: 1; margin-bottom: 16px; background: linear-gradient(135deg, var(--text) 0%, var(--accent-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-  .hero-tagline { font-family: var(--font-display); font-size: clamp(1.1rem, 2.5vw, 1.6rem); color: var(--accent); font-style: italic; margin-bottom: 20px; }
-  .hero-desc { max-width: 60ch; font-size: 1.05rem; line-height: 1.7; margin-bottom: 40px; color: var(--text-soft); }
-  .section-header { text-align: center; margin-bottom: 48px; }
-  .section-header h2 { margin-bottom: 12px; }
-  .section-dark { background: var(--panel); }
-  .prodotti-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; }
-  .prodotto-card { overflow: hidden; display: flex; flex-direction: column; transition: transform var(--transition); }
-  .prodotto-card:hover { transform: translateY(-4px); }
-  .prodotto-img-wrap { position: relative; aspect-ratio: 16/10; overflow: hidden; }
-  .prodotto-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
-  .prodotto-card:hover .prodotto-img-wrap img { transform: scale(1.05); }
-  .alcolico-badge { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.75); backdrop-filter: blur(4px); padding: 4px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; color: var(--accent-light); }
-  .prodotto-body { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-  .prodotto-cat { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 8px; font-weight: 600; }
-  .prodotto-nome { font-family: var(--font-display); font-size: 1.3rem; margin-bottom: 8px; color: var(--text); }
-  .prodotto-desc { font-size: 0.9rem; color: var(--muted); line-height: 1.5; flex: 1; margin-bottom: 16px; }
-  .prodotto-footer { display: flex; align-items: center; justify-content: space-between; }
-  .prodotto-cta { font-size: 0.85rem; color: var(--accent); font-weight: 600; }
-  .categorie-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
-  .cat-card { padding: 28px 20px; text-align: center; transition: all var(--transition); cursor: pointer; }
-  .cat-card:hover { background: rgba(200,146,42,0.08); border-color: var(--accent); transform: translateY(-2px); }
-  .cat-emoji { font-size: 2.5rem; display: block; margin-bottom: 12px; }
-  .cat-nome { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 8px; }
-  .footer { background: var(--panel); border-top: 1px solid var(--border); padding: 48px 0 32px; }
-  .footer-content { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; }
-  .footer-logo { font-family: var(--font-display); font-size: 1.4rem; color: var(--accent-light); font-weight: 700; }
+  /* ── HERO ── */
+  .hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-start; }
+  .hero-bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; background: var(--bg); }
+  .glow-orb { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.5; }
+  .orb-1 { top: -10%; left: -10%; width: 50vw; height: 50vw; background: rgba(230, 179, 81, 0.15); animation: float 10s ease-in-out infinite; }
+  .orb-2 { bottom: -20%; right: -10%; width: 60vw; height: 60vw; background: rgba(230, 179, 81, 0.08); animation: float 15s ease-in-out infinite reverse; }
+  .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 40%, var(--bg) 100%); }
+  
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, -30px); }
+  }
+
+  .header { position: fixed; top: 0; left: 0; right: 0; z-index: 100; border-bottom: 1px solid var(--border); }
+  .nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; }
+  .logo-text { font-family: var(--font-display); font-size: 1.6rem; font-weight: 700; color: var(--accent); letter-spacing: 1px; }
+  .nav-actions { display: flex; gap: 16px; }
+
+  .hero-content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding-top: 120px; padding-bottom: 80px; }
+  
+  .hero-badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 8px 16px; border-radius: 99px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-soft); margin-bottom: 32px; }
+  .badge-dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; box-shadow: 0 0 10px var(--success); animation: pulse 2s infinite; }
+  @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+  .hero-title { font-family: var(--font-display); font-size: clamp(3.5rem, 8vw, 6.5rem); font-weight: 700; color: #fff; line-height: 1.1; margin-bottom: 16px; letter-spacing: -0.02em; }
+  .hero-tagline { font-size: clamp(1.2rem, 3vw, 1.8rem); color: var(--accent); font-weight: 300; margin-bottom: 24px; font-style: italic; font-family: var(--font-display); }
+  .hero-desc { max-width: 550px; font-size: 1.1rem; line-height: 1.8; color: var(--text-soft); margin-bottom: 48px; }
+  .hero-actions { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+
+  /* ── SECTIONS ── */
+  .section { padding: 120px 0; }
+  .section-dark { background: var(--bg-soft); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+  .section-header { text-align: center; margin-bottom: 64px; }
+  .section-header h2 { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; margin-bottom: 16px; }
+  .section-header p { color: var(--text-soft); font-size: 1.1rem; max-width: 500px; margin: 0 auto; }
+
+  /* ── STEPS ── */
+  .steps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .step-card { padding: 40px 32px; text-align: center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); }
+  .step-icon { width: 64px; height: 64px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; border-radius: 50%; color: var(--accent); }
+  .step-card h4 { font-size: 1.2rem; margin-bottom: 12px; font-family: var(--font-display); }
+  .step-card p { font-size: 0.95rem; color: var(--text-soft); line-height: 1.6; }
+
+  /* ── PRODOTTI GRID ── */
+  .prodotti-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 32px; }
+  .prodotto-card { display: flex; flex-direction: column; background: #000; border: 1px solid var(--border); }
+  .prodotto-img-wrap { position: relative; height: 240px; overflow: hidden; }
+  .prodotto-img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.7s ease; opacity: 0.8; }
+  .prodotto-card:hover .prodotto-img-wrap img { transform: scale(1.08); opacity: 1; }
+  .alcolico-badge { position: absolute; top: 16px; right: 16px; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); padding: 6px 12px; border-radius: 99px; font-size: 0.8rem; font-weight: 600; color: var(--accent); border: 1px solid var(--accent-glow); }
+  .prodotto-body { padding: 24px; flex: 1; display: flex; flex-direction: column; }
+  .prodotto-cat { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--accent); margin-bottom: 10px; font-weight: 600; }
+  .prodotto-nome { font-family: var(--font-display); font-size: 1.5rem; margin-bottom: 12px; color: #fff; }
+  .prodotto-desc { font-size: 0.95rem; color: var(--text-soft); line-height: 1.6; flex: 1; margin-bottom: 24px; }
+  .prodotto-footer { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 16px; }
+  .price { font-family: var(--font-body); font-size: 1.2rem; font-weight: 600; color: #fff; }
+  .prodotto-cta { font-size: 0.85rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; transition: var(--transition); }
+  .prodotto-card:hover .prodotto-cta { transform: translateX(5px); }
+
+  /* ── INFO BOX ── */
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; border-radius: var(--radius-lg); overflow: hidden; padding: 64px; gap: 64px; }
+  .contatti-list { display: flex; gap: 16px; flex-wrap: wrap; }
+  .orari-list li { display: flex; justify-content: space-between; padding: 16px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 1.05rem; }
+  .orari-list li:last-child { border: none; }
+  .giorno { color: var(--text-soft); }
+  .ore { font-weight: 600; color: var(--accent-light); }
+
+  /* ── FOOTER ── */
+  .footer { padding: 64px 0; border-top: 1px solid var(--border); background: var(--bg); }
+  .footer-inner { display: flex; justify-content: space-between; align-items: flex-end; }
+  .footer-tagline { color: var(--accent); font-style: italic; margin-top: 8px; font-family: var(--font-display); }
+  .footer-legal { text-align: right; color: var(--text-soft); font-size: 0.85rem; }
+
+  /* ANIMATION DELAYS */
+  .delay-1 { transition-delay: 0.1s; } .delay-2 { transition-delay: 0.2s; } .delay-3 { transition-delay: 0.3s; } .delay-4 { transition-delay: 0.4s; }
+
+  @media (max-width: 900px) {
+    .steps-grid { grid-template-columns: 1fr 1fr; }
+    .info-grid { grid-template-columns: 1fr; padding: 32px; gap: 32px; }
+    .hero-title { font-size: 3.5rem; }
+  }
+  @media (max-width: 600px) {
+    .nav-actions .btn-ghost { display: none; }
+    .steps-grid { grid-template-columns: 1fr; }
+    .hero-actions { flex-direction: column; width: 100%; }
+    .hero-actions .btn { width: 100%; }
+    .footer-inner { flex-direction: column; align-items: flex-start; gap: 24px; }
+    .footer-legal { text-align: left; }
+  }
 </style>
 
 <script>
   import { getFirebaseClient } from "../lib/firebase-client";
-  import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+  import { collection, onSnapshot } from "firebase/firestore";
 
+  // --- 1. SCRIPT PER ANIMAZIONI ALLO SCROLL ---
+  const reveals = document.querySelectorAll('.reveal');
+  const revealOnScroll = () => {
+    const windowHeight = window.innerHeight;
+    reveals.forEach(reveal => {
+      const revealTop = reveal.getBoundingClientRect().top;
+      if (revealTop < windowHeight - 50) reveal.classList.add('active');
+    });
+  };
+  window.addEventListener('scroll', revealOnScroll);
+  setTimeout(revealOnScroll, 100); // Trigger initial
+
+  // --- 2. SCRIPT PER PRODOTTI IN EVIDENZA (TEMPO REALE) ---
   const evContainer = document.getElementById("evidenzaContainer");
-  const catContainer = document.getElementById("categorieHomeContainer");
 
-  if (evContainer || catContainer) {
+  if (evContainer) {
     const { db } = getFirebaseClient();
     let categorie: any[] = [];
     let prodotti: any[] = [];
     let catLoaded = false;
     let prodLoaded = false;
 
-    onSnapshot(query(collection(db, "categorie"), orderBy("ordinamento", "asc")), (snap) => {
+    onSnapshot(collection(db, "categorie"), (snap) => {
       categorie = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       catLoaded = true;
-
-      // Disegna le categorie nella Home in tempo reale
-      if (catContainer) {
-        catContainer.innerHTML = categorie.map((cat: any) => `
-          <a href="/menu#cat-${cat.id}" class="cat-card card">
-            <span class="cat-emoji">${cat.emoji || ''}</span>
-            <h3 class="cat-nome">${cat.nome}</h3>
-          </a>
-        `).join("");
-      }
-
       if (prodLoaded) renderEvidenza();
     });
 
@@ -146,30 +266,33 @@ const pub = data.pub;
       const evidenza = prodotti.filter((p: any) => p.inEvidenza && p.disponibile !== false).slice(0, 6);
 
       if (evidenza.length === 0) {
-        evContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--muted);">Nessun prodotto in evidenza.</div>`;
+        evContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-soft);">Nessun prodotto in evidenza.</div>`;
         return;
       }
 
-      evContainer.innerHTML = evidenza.map((p: any) => {
-        const cat = catMap[p.categoriaId] || { emoji: '🍽️', nome: 'Varie' };
+      evContainer.innerHTML = evidenza.map((p: any, i: number) => {
+        const cat = catMap[p.categoriaId] || { nome: 'Speciale' };
         return `
-          <a href="/menu#cat-${p.categoriaId}" class="prodotto-card card card-glow">
+          <a href="/menu#cat-${p.categoriaId}" class="prodotto-card card reveal delay-${i%4}">
             <div class="prodotto-img-wrap">
               <img src="${p.immagine || '/images/placeholder.svg'}" alt="${p.nome}" loading="lazy" onerror="this.src='/images/placeholder.svg'" />
               ${p.alcolico ? `<span class="alcolico-badge">🍸 ${p.gradazione || ''}</span>` : ''}
             </div>
             <div class="prodotto-body">
-              <div class="prodotto-cat">${cat.emoji || ''} ${cat.nome}</div>
+              <div class="prodotto-cat">${cat.nome}</div>
               <h3 class="prodotto-nome">${p.nome}</h3>
               <p class="prodotto-desc">${p.descrizione || ''}</p>
               <div class="prodotto-footer">
                 <span class="price">€ ${Number(p.prezzo).toFixed(2).replace('.', ',')}</span>
-                <span class="prodotto-cta">Ordina →</span>
+                <span class="prodotto-cta">Ordina Ora ➔</span>
               </div>
             </div>
           </a>
         `;
       }).join("");
+      
+      // Ritriggera l'animazione per i nuovi elementi creati
+      setTimeout(revealOnScroll, 50);
     }
   }
 </script>
