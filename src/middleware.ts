@@ -1,23 +1,34 @@
-import type { MiddlewareHandler } from "astro";
+import { defineMiddleware } from 'astro:middleware';
 
-// Una password semplice per il pub (Mettila nel .env come ADMIN_PASSWORD=supersegreto)
-const ADMIN_PASSWORD = import.meta.env.ADMIN_PASSWORD || "pub123"; 
+export const onRequest = defineMiddleware(async ({ request, locals, url }, next) => {
+  // Controlla se l'utente sta cercando di entrare nell'area admin
+  if (url.pathname.startsWith('/admin')) {
+    
+    // Recupera le credenziali dall'ambiente Cloudflare
+    const env = (locals as any).runtime?.env || import.meta.env;
+    const adminUser = env.ADMIN_USERNAME || 'admin';
+    const adminPass = env.ADMIN_PASSWORD;
 
-export const onRequest: MiddlewareHandler = async ({ request, url, cookies, redirect }, next) => {
-  // Se l'utente cerca di entrare in /admin...
-  if (url.pathname.startsWith("/admin")) {
-    const authCookie = cookies.get("admin_session")?.value;
+    // Se non hai impostato la password su Cloudflare, blocca tutto per sicurezza
+    if (!adminPass) {
+      return new Response('Configurazione di sicurezza mancante sul server.', { status: 500 });
+    }
 
-    // ...e non ha il cookie di accesso, o è sbagliato
-    if (authCookie !== ADMIN_PASSWORD) {
-      // Se sta cercando di fare login (es. /admin/login), lascialo passare
-      if (url.pathname === "/admin/login") {
-        return next();
-      }
-      // Altrimenti buttalo alla pagina di login
-      return redirect("/admin/login");
+    // Costruisce la chiave criptata attesa
+    const expectedAuth = `Basic ${btoa(`${adminUser}:${adminPass}`)}`;
+    const basicAuth = request.headers.get('authorization');
+
+    // Se non c'è la password, o è sbagliata, mostra il popup di login del browser
+    if (basicAuth !== expectedAuth) {
+      return new Response('Accesso Riservato al Personale', {
+        status: 401,
+        headers: {
+          'WWW-Authenticate': 'Basic realm="Area Admin ShoopOnline"',
+        },
+      });
     }
   }
-  
+
+  // Se è tutto ok, o se è un cliente normale, lascialo passare
   return next();
-};
+});
